@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-noto), "Hiragino Sans", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+
+  --color-ink: #1e1830;
+  --color-sub: #6b6580;
+  --color-mute: #a29cb4;
+  --color-line: #ece6f5;
+  --color-page: #f7f5fb;
+
+  --color-side: #170d26;
+  --color-side-2: #22143a;
+  --color-side-3: #2e1b4d;
+
+  --color-brand: #6d35c9;
+  --color-brand-2: #8b5cf6;
+  --color-brand-3: #5a27ad;
+  --color-brand-soft: #f1ebfc;
+  --color-brand-light: #c7adf2;
+
+  --color-up: #d6455d;
+  --color-ok: #1f9d57;
+  --color-info: #2f6fdc;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-page);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "palt";
+}
+
+.card {
+  background: #fff;
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(42, 20, 80, 0.04), 0 4px 16px rgba(42, 20, 80, 0.04);
+}
+
+.btn-brand {
+  background: linear-gradient(135deg, #7b3fe0 0%, #5f2bb8 100%);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(109, 53, 201, 0.28);
+}
+.btn-brand:hover {
+  background: linear-gradient(135deg, #8a52ea 0%, #6a32c8 100%);
+}
+.btn-brand-soft {
+  background: linear-gradient(135deg, #c9aef4 0%, #b08be9 100%);
+  color: #fff;
+}
+.btn-brand-soft:hover {
+  background: linear-gradient(135deg, #d3baf7 0%, #ba98ee 100%);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 16px;
+}
+.section-title::before {
+  content: "";
+  width: 4px;
+  height: 18px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #8b5cf6, #6d35c9);
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #d9d0ea;
+  border-radius: 6px;
+}
+
+.recharts-wrapper *:focus {
+  outline: none;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+}
