@@ -76,15 +76,16 @@ async function seedBase(db: DB, demo: boolean) {
     await db.insert(t.priceRules).values(rules)
     await db.insert(t.menuItems).values(MENU.map((m, i) => ({ ...m, storeId, sort: i })))
   }
-  await db.insert(t.calendarDays).values([
-    { storeId: UENO, date: '2026-10-09', dayType: 'イベント', label: 'ビンゴイベント（3日間）' },
-    { storeId: UENO, date: '2026-10-10', dayType: 'イベント', label: 'ビンゴイベント（3日間）' },
-    { storeId: UENO, date: '2026-10-11', dayType: 'イベント', label: 'ビンゴイベント（3日間）' },
-    { storeId: UENO, date: '2026-10-27', dayType: 'イベント', label: 'ネイルイベント' },
-    { storeId: UENO, date: '2026-11-21', dayType: 'イベント', label: 'イベント（サンプル）', customPrices: { 夜: { 男性: 14000 } } },
-    { storeId: UENO, date: '2026-12-24', dayType: 'イベント', label: 'クリスマスイベント（サンプル）' },
-    { storeId: UENO, date: '2026-12-31', dayType: 'イベント', label: '年越しイベント（サンプル）' },
-  ])
+  // 祝日は日本の祝日データ（内閣府「国民の祝日」）から自動判定。カレンダーの個別設定は店舗が入力したイベントのみ
+  if (demo) {
+    // デモ：10月の Excel 備考にあるイベント（3日間ビンゴ・ネイルイベント）のみ。架空の予定は入れない
+    await db.insert(t.calendarDays).values([
+      { storeId: UENO, date: '2026-10-09', dayType: 'イベント', label: 'ビンゴイベント（3日間）' },
+      { storeId: UENO, date: '2026-10-10', dayType: 'イベント', label: 'ビンゴイベント（3日間）' },
+      { storeId: UENO, date: '2026-10-11', dayType: 'イベント', label: 'ビンゴイベント（3日間）' },
+      { storeId: UENO, date: '2026-10-27', dayType: 'イベント', label: 'ネイルイベント' },
+    ])
+  }
 
   if (demo) {
     const hash = (p: string) => bcrypt.hashSync(p, 10)

@@ -52,7 +52,9 @@ export function PriceCalendar({
               <>
                 <span className={cx('leading-none font-medium tabular-nums', type === '祝日' || weekdayOf(d) === 0 ? 'text-up' : '')}>{+d.slice(8)}</span>
                 {compact ? (
-                  isToday ? <span className="text-[9px] leading-none text-brand">本日</span> : type === 'イベント' && <span className="text-[9px] leading-none">イベント</span>
+                  isToday ? <span className="text-[9px] leading-none text-brand">本日</span>
+                    : type === 'イベント' ? <span className="text-[9px] leading-none">イベント</span>
+                    : type === '祝日' && <span className="text-[9px] leading-none text-up">祝日</span>
                 ) : (
                   <span className="mt-0.5 line-clamp-2 px-0.5 text-[10px] leading-tight text-sub">{isToday ? '本日' : label}</span>
                 )}
