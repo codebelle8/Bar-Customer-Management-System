@@ -7,6 +7,8 @@ import {
   Bell, CalendarDays, ChartColumn, ChevronDown, FileText, Gift, House, KeyRound, LineChart, LogOut, Menu, Settings, UserCheck, UserCog, Users, X,
 } from 'lucide-react'
 import { logout, selectStore } from '@/app/actions'
+import type { ThemePref } from '@/lib/theme'
+import { ThemeToggle } from './theme'
 import { cx } from './ui'
 
 export const NAV = [
@@ -96,8 +98,9 @@ export function Topbar(props: {
   roleLabel: string
   dateLabel: string
   notices: Notice[]
+  themePref: ThemePref
 }) {
-  const { isOwner, stores, storeId, storeName, userName, roleLabel, dateLabel, notices } = props
+  const { isOwner, stores, storeId, storeName, userName, roleLabel, dateLabel, notices, themePref } = props
   const pathname = usePathname()
   const title = NAV.find((n) => pathname === n.href || pathname.startsWith(`${n.href}/`))?.label ?? ''
   const [menu, setMenu] = useState(false)
@@ -133,6 +136,7 @@ export function Topbar(props: {
             <CalendarDays className="size-4 text-sub" />
             {dateLabel}
           </span>
+          <ThemeToggle initial={themePref} />
           <div ref={bellRef} className="relative">
             <button onClick={() => setBell(!bell)} className="relative rounded-full p-2 hover:bg-page" aria-label="お知らせ">
               <Bell className="size-5" />

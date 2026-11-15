@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Noto_Sans_JP } from 'next/font/google'
+import { cookies } from 'next/headers'
+import { THEME_COOKIE, THEME_INIT_SCRIPT, parseThemePref } from '@/lib/theme'
 import './globals.css'
 
 const noto = Noto_Sans_JP({ variable: '--font-noto', subsets: ['latin'], weight: ['400', '500', '700'], display: 'swap' })
@@ -12,9 +14,13 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { themeColor: '#170d26' }
 
-export default function RootLayout({ children }: LayoutProps<'/'>) {
+export default async function RootLayout({ children }: LayoutProps<'/'>) {
+  const pref = parseThemePref((await cookies()).get(THEME_COOKIE)?.value)
   return (
-    <html lang="ja" className={`${noto.variable} h-full`}>
+    <html lang="ja" className={`${noto.variable} h-full`} data-theme-pref={pref} data-theme={pref === 'dark' ? 'dark' : 'light'} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="min-h-full">{children}</body>
     </html>
   )

@@ -1,10 +1,14 @@
 import type { Metadata } from 'next'
+import { cookies } from 'next/headers'
+import { ThemeToggle } from '@/components/theme'
+import { THEME_COOKIE, parseThemePref } from '@/lib/theme'
 import { LoginForm } from './LoginForm'
 
 export const metadata: Metadata = { title: 'ログイン' }
 
 export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
   const sp = await searchParams
+  const themePref = parseThemePref((await cookies()).get(THEME_COOKIE)?.value)
   const next = typeof sp.next === 'string' ? sp.next : ''
   const demo = (process.env.SEED_MODE ?? (process.env.DATABASE_URL ? 'clean' : 'demo')) === 'demo'
   return (
@@ -22,10 +26,13 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
           </div>
         </div>
       </section>
-      <section className="flex flex-1 items-center justify-center bg-page px-5 py-10">
+      <section className="relative flex flex-1 items-center justify-center bg-page px-5 py-10">
+        <ThemeToggle initial={themePref} className="absolute top-4 right-4" />
         <div className="w-full max-w-[400px]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo-dark.png" alt="HARNES TOKYO" className="mx-auto mb-8 w-[200px] lg:hidden" />
+          <img src="/brand/logo-dark.png" alt="HARNES TOKYO" className="theme-light-only mx-auto mb-8 w-[200px] lg:hidden" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/logo-white.png" alt="HARNES TOKYO" className="theme-dark-only mx-auto mb-8 w-[200px] lg:hidden" />
           <div className="card p-8">
             <h1 className="text-[22px] font-bold">ログイン</h1>
             <p className="mt-1 text-[13px] text-sub">発行されたIDとパスワードを入力してください。</p>

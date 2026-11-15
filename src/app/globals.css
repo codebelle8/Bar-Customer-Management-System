@@ -8,6 +8,8 @@
   --color-mute: #a29cb4;
   --color-line: #ece6f5;
   --color-page: #f7f5fb;
+  --color-surface: #ffffff;
+  --color-surface-2: #f8f6fc;
 
   --color-side: #170d26;
   --color-side-2: #22143a;
@@ -39,7 +41,7 @@ body {
 }
 
 .card {
-  background: #fff;
+  background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: 14px;
   box-shadow: 0 1px 2px rgba(42, 20, 80, 0.04), 0 4px 16px rgba(42, 20, 80, 0.04);
@@ -109,5 +111,305 @@ body {
   }
   body {
     background: #fff;
+  }
+}
+
+/* ============================== テーマ（ライト／ダーク） ==============================
+   既定はライト。<html data-theme="dark"> でダーク（画面表示のみ。印刷は常にライト）。
+   色トークンをダーク用に切り替え、画面ごとに直接指定している淡い色もダーク用の色に置き換える。 */
+@media screen {
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --color-ink: #ece8f5;
+    --color-sub: #aba4bf;
+    --color-mute: #7a7390;
+    --color-line: #2f2843;
+    --color-page: #0f0b18;
+    --color-surface: #1a1426;
+    --color-surface-2: #221a31;
+    --color-brand: #a27cf0;
+    --color-brand-2: #b393f5;
+    --color-brand-3: #8e63e6;
+    --color-brand-soft: #2b1f45;
+    --color-brand-light: #6f52a8;
+    --color-up: #f0768a;
+    --color-ok: #4cc685;
+    --color-info: #7fa9f5;
+  }
+  :root[data-theme="dark"] .card {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.25);
+  }
+  :root[data-theme="dark"] .btn-brand-soft {
+    background: linear-gradient(135deg, #5d3fa0 0%, #4b2f88 100%);
+  }
+  :root[data-theme="dark"] .btn-brand-soft:hover {
+    background: linear-gradient(135deg, #6a4ab0 0%, #573799 100%);
+  }
+  :root[data-theme="dark"] .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #3b3252;
+  }
+  :root[data-theme="dark"] .theme-light-only {
+    display: none !important;
+  }
+  :root:not([data-theme="dark"]) .theme-dark-only {
+    display: none !important;
+  }
+}
+@media print {
+  .theme-dark-only {
+    display: none !important;
+  }
+}
+
+@layer utilities {
+  @media screen {
+    :where([data-theme="dark"]) [class~="bg-white"] { background-color: var(--color-surface); }
+    :where([data-theme="dark"]) [class~="hover:bg-white"]:hover { background-color: var(--color-surface); }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-white"] { background-color: var(--color-surface); }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-white"] { background-color: var(--color-surface); }
+    :where([data-theme="dark"]) [class~="bg-white/95"] { background-color: color-mix(in srgb, var(--color-surface) 95%, transparent); }
+    :where([data-theme="dark"]) [class~="hover:bg-white/95"]:hover { background-color: color-mix(in srgb, var(--color-surface) 95%, transparent); }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-white/95"] { background-color: color-mix(in srgb, var(--color-surface) 95%, transparent); }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-white/95"] { background-color: color-mix(in srgb, var(--color-surface) 95%, transparent); }
+    :where([data-theme="dark"]) [class~="bg-white/70"] { background-color: color-mix(in srgb, var(--color-surface) 70%, transparent); }
+    :where([data-theme="dark"]) [class~="hover:bg-white/70"]:hover { background-color: color-mix(in srgb, var(--color-surface) 70%, transparent); }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-white/70"] { background-color: color-mix(in srgb, var(--color-surface) 70%, transparent); }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-white/70"] { background-color: color-mix(in srgb, var(--color-surface) 70%, transparent); }
+    :where([data-theme="dark"]) [class~="bg-[#f8f6fc]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#f8f6fc]"]:hover { background-color: #221a31; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#f8f6fc]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#f8f6fc]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) [class~="bg-[#faf8fd]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#faf8fd]"]:hover { background-color: #221a31; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#faf8fd]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#faf8fd]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) [class~="bg-[#fcfbfe]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#fcfbfe]"]:hover { background-color: #221a31; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#fcfbfe]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#fcfbfe]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) [class~="bg-[#fbfaff]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#fbfaff]"]:hover { background-color: #221a31; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#fbfaff]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#fbfaff]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) [class~="bg-[#fbf9fe]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#fbf9fe]"]:hover { background-color: #221a31; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#fbf9fe]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#fbf9fe]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) [class~="bg-[#faf8fe]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#faf8fe]"]:hover { background-color: #221a31; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#faf8fe]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#faf8fe]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) [class~="bg-[#f6f3fb]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#f6f3fb]"]:hover { background-color: #221a31; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#f6f3fb]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#f6f3fb]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) [class~="bg-[#f6f2fc]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#f6f2fc]"]:hover { background-color: #221a31; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#f6f2fc]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#f6f2fc]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) [class~="bg-[#f4effc]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#f4effc]"]:hover { background-color: #221a31; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#f4effc]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#f4effc]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) [class~="bg-[#f0eef4]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#f0eef4]"]:hover { background-color: #221a31; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#f0eef4]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#f0eef4]"] { background-color: #221a31; }
+    :where([data-theme="dark"]) [class~="bg-[#efeaf7]"] { background-color: #2b2140; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#efeaf7]"]:hover { background-color: #2b2140; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#efeaf7]"] { background-color: #2b2140; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#efeaf7]"] { background-color: #2b2140; }
+    :where([data-theme="dark"]) [class~="bg-[#efe7fb]"] { background-color: #2b2140; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#efe7fb]"]:hover { background-color: #2b2140; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#efe7fb]"] { background-color: #2b2140; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#efe7fb]"] { background-color: #2b2140; }
+    :where([data-theme="dark"]) [class~="bg-[#efeaf9]"] { background-color: #2b2140; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#efeaf9]"]:hover { background-color: #2b2140; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#efeaf9]"] { background-color: #2b2140; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#efeaf9]"] { background-color: #2b2140; }
+    :where([data-theme="dark"]) [class~="bg-[#e4dcf5]"] { background-color: #2b2140; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#e4dcf5]"]:hover { background-color: #2b2140; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#e4dcf5]"] { background-color: #2b2140; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#e4dcf5]"] { background-color: #2b2140; }
+    :where([data-theme="dark"]) [class~="bg-[#e6dbfa]"] { background-color: #2b2140; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#e6dbfa]"]:hover { background-color: #2b2140; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#e6dbfa]"] { background-color: #2b2140; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#e6dbfa]"] { background-color: #2b2140; }
+    :where([data-theme="dark"]) [class~="bg-[#d9d3e6]"] { background-color: #2b2140; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#d9d3e6]"]:hover { background-color: #2b2140; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#d9d3e6]"] { background-color: #2b2140; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#d9d3e6]"] { background-color: #2b2140; }
+    :where([data-theme="dark"]) [class~="bg-[#e9e6ef]"] { background-color: #120d1c; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#e9e6ef]"]:hover { background-color: #120d1c; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#e9e6ef]"] { background-color: #120d1c; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#e9e6ef]"] { background-color: #120d1c; }
+    :where([data-theme="dark"]) [class~="bg-[#fde7eb]"] { background-color: #3a1a22; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#fde7eb]"]:hover { background-color: #3a1a22; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#fde7eb]"] { background-color: #3a1a22; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#fde7eb]"] { background-color: #3a1a22; }
+    :where([data-theme="dark"]) [class~="bg-[#fff4f6]"] { background-color: #3a1a22; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#fff4f6]"]:hover { background-color: #3a1a22; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#fff4f6]"] { background-color: #3a1a22; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#fff4f6]"] { background-color: #3a1a22; }
+    :where([data-theme="dark"]) [class~="bg-[#fdecef]"] { background-color: #3a1a22; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#fdecef]"]:hover { background-color: #3a1a22; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#fdecef]"] { background-color: #3a1a22; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#fdecef]"] { background-color: #3a1a22; }
+    :where([data-theme="dark"]) [class~="bg-[#fff8f9]"] { background-color: #3a1a22; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#fff8f9]"]:hover { background-color: #3a1a22; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#fff8f9]"] { background-color: #3a1a22; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#fff8f9]"] { background-color: #3a1a22; }
+    :where([data-theme="dark"]) [class~="bg-[#fff6f8]"] { background-color: #3a1a22; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#fff6f8]"]:hover { background-color: #3a1a22; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#fff6f8]"] { background-color: #3a1a22; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#fff6f8]"] { background-color: #3a1a22; }
+    :where([data-theme="dark"]) [class~="bg-[#fffafb]"] { background-color: #3a1a22; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#fffafb]"]:hover { background-color: #3a1a22; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#fffafb]"] { background-color: #3a1a22; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#fffafb]"] { background-color: #3a1a22; }
+    :where([data-theme="dark"]) [class~="bg-[#fdeaf2]"] { background-color: #3d1c2e; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#fdeaf2]"]:hover { background-color: #3d1c2e; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#fdeaf2]"] { background-color: #3d1c2e; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#fdeaf2]"] { background-color: #3d1c2e; }
+    :where([data-theme="dark"]) [class~="bg-[#fde3ec]"] { background-color: #3d1c2e; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#fde3ec]"]:hover { background-color: #3d1c2e; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#fde3ec]"] { background-color: #3d1c2e; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#fde3ec]"] { background-color: #3d1c2e; }
+    :where([data-theme="dark"]) [class~="bg-[#f9cfd6]"] { background-color: #4d2232; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#f9cfd6]"]:hover { background-color: #4d2232; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#f9cfd6]"] { background-color: #4d2232; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#f9cfd6]"] { background-color: #4d2232; }
+    :where([data-theme="dark"]) [class~="bg-[#effaf3]"] { background-color: #13301f; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#effaf3]"]:hover { background-color: #13301f; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#effaf3]"] { background-color: #13301f; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#effaf3]"] { background-color: #13301f; }
+    :where([data-theme="dark"]) [class~="bg-[#e3f6ea]"] { background-color: #13301f; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#e3f6ea]"]:hover { background-color: #13301f; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#e3f6ea]"] { background-color: #13301f; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#e3f6ea]"] { background-color: #13301f; }
+    :where([data-theme="dark"]) [class~="bg-[#e6f0ff]"] { background-color: #172540; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#e6f0ff]"]:hover { background-color: #172540; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#e6f0ff]"] { background-color: #172540; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#e6f0ff]"] { background-color: #172540; }
+    :where([data-theme="dark"]) [class~="bg-[#e6eeff]"] { background-color: #172540; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#e6eeff]"]:hover { background-color: #172540; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#e6eeff]"] { background-color: #172540; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#e6eeff]"] { background-color: #172540; }
+    :where([data-theme="dark"]) [class~="bg-[#f3f7ff]"] { background-color: #172540; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#f3f7ff]"]:hover { background-color: #172540; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#f3f7ff]"] { background-color: #172540; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#f3f7ff]"] { background-color: #172540; }
+    :where([data-theme="dark"]) [class~="bg-[#fff9e8]"] { background-color: #33270f; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#fff9e8]"]:hover { background-color: #33270f; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#fff9e8]"] { background-color: #33270f; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#fff9e8]"] { background-color: #33270f; }
+    :where([data-theme="dark"]) [class~="bg-[#fff3d6]"] { background-color: #33270f; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#fff3d6]"]:hover { background-color: #33270f; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#fff3d6]"] { background-color: #33270f; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#fff3d6]"] { background-color: #33270f; }
+    :where([data-theme="dark"]) [class~="bg-[#fffaeb]"] { background-color: #33270f; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#fffaeb]"]:hover { background-color: #33270f; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#fffaeb]"] { background-color: #33270f; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#fffaeb]"] { background-color: #33270f; }
+    :where([data-theme="dark"]) [class~="bg-[#fffbea]"] { background-color: #33270f; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#fffbea]"]:hover { background-color: #33270f; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#fffbea]"] { background-color: #33270f; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#fffbea]"] { background-color: #33270f; }
+    :where([data-theme="dark"]) [class~="bg-[#fff2bf]"] { background-color: #3f3311; }
+    :where([data-theme="dark"]) [class~="hover:bg-[#fff2bf]"]:hover { background-color: #3f3311; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:bg-[#fff2bf]"] { background-color: #3f3311; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:bg-[#fff2bf]"] { background-color: #3f3311; }
+    :where([data-theme="dark"]) [class~="text-[#c8457e]"] { color: #f08bb6; }
+    :where([data-theme="dark"]) [class~="hover:text-[#c8457e]"]:hover { color: #f08bb6; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:text-[#c8457e]"] { color: #f08bb6; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:text-[#c8457e]"] { color: #f08bb6; }
+    :where([data-theme="dark"]) [class~="text-[#b7791f]"] { color: #e3a94f; }
+    :where([data-theme="dark"]) [class~="hover:text-[#b7791f]"]:hover { color: #e3a94f; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:text-[#b7791f]"] { color: #e3a94f; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:text-[#b7791f]"] { color: #e3a94f; }
+    :where([data-theme="dark"]) [class~="text-[#8a5a00]"] { color: #e8bb5f; }
+    :where([data-theme="dark"]) [class~="hover:text-[#8a5a00]"]:hover { color: #e8bb5f; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:text-[#8a5a00]"] { color: #e8bb5f; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:text-[#8a5a00]"] { color: #e8bb5f; }
+    :where([data-theme="dark"]) [class~="text-[#8a6a00]"] { color: #e8bb5f; }
+    :where([data-theme="dark"]) [class~="hover:text-[#8a6a00]"]:hover { color: #e8bb5f; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:text-[#8a6a00]"] { color: #e8bb5f; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:text-[#8a6a00]"] { color: #e8bb5f; }
+    :where([data-theme="dark"]) [class~="text-[#7a5410]"] { color: #e8bb5f; }
+    :where([data-theme="dark"]) [class~="hover:text-[#7a5410]"]:hover { color: #e8bb5f; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:text-[#7a5410]"] { color: #e8bb5f; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:text-[#7a5410]"] { color: #e8bb5f; }
+    :where([data-theme="dark"]) [class~="text-[#9a6412]"] { color: #e8bb5f; }
+    :where([data-theme="dark"]) [class~="hover:text-[#9a6412]"]:hover { color: #e8bb5f; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:text-[#9a6412]"] { color: #e8bb5f; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:text-[#9a6412]"] { color: #e8bb5f; }
+    :where([data-theme="dark"]) [class~="text-[#d6455d]"] { color: #f0768a; }
+    :where([data-theme="dark"]) [class~="hover:text-[#d6455d]"]:hover { color: #f0768a; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:text-[#d6455d]"] { color: #f0768a; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:text-[#d6455d]"] { color: #f0768a; }
+    :where([data-theme="dark"]) [class~="text-[#2f6fdc]"] { color: #7fa9f5; }
+    :where([data-theme="dark"]) [class~="hover:text-[#2f6fdc]"]:hover { color: #7fa9f5; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:text-[#2f6fdc]"] { color: #7fa9f5; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:text-[#2f6fdc]"] { color: #7fa9f5; }
+    :where([data-theme="dark"]) [class~="text-[#2b5cb8]"] { color: #7fa9f5; }
+    :where([data-theme="dark"]) [class~="hover:text-[#2b5cb8]"]:hover { color: #7fa9f5; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:text-[#2b5cb8]"] { color: #7fa9f5; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:text-[#2b5cb8]"] { color: #7fa9f5; }
+    :where([data-theme="dark"]) [class~="text-[#1f9d57]"] { color: #4cc685; }
+    :where([data-theme="dark"]) [class~="hover:text-[#1f9d57]"]:hover { color: #4cc685; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:text-[#1f9d57]"] { color: #4cc685; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:text-[#1f9d57]"] { color: #4cc685; }
+    :where([data-theme="dark"]) [class~="text-[#222]"] { color: #ddd8e8; }
+    :where([data-theme="dark"]) [class~="hover:text-[#222]"]:hover { color: #ddd8e8; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:text-[#222]"] { color: #ddd8e8; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:text-[#222]"] { color: #ddd8e8; }
+    :where([data-theme="dark"]) [class~="border-[#f2c2cb]"] { border-color: #5c2a36; }
+    :where([data-theme="dark"]) [class~="hover:border-[#f2c2cb]"]:hover { border-color: #5c2a36; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:border-[#f2c2cb]"] { border-color: #5c2a36; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:border-[#f2c2cb]"] { border-color: #5c2a36; }
+    :where([data-theme="dark"]) [class~="border-[#f6dbe0]"] { border-color: #5c2a36; }
+    :where([data-theme="dark"]) [class~="hover:border-[#f6dbe0]"]:hover { border-color: #5c2a36; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:border-[#f6dbe0]"] { border-color: #5c2a36; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:border-[#f6dbe0]"] { border-color: #5c2a36; }
+    :where([data-theme="dark"]) [class~="border-[#f3dc9b]"] { border-color: #5c4b1d; }
+    :where([data-theme="dark"]) [class~="hover:border-[#f3dc9b]"]:hover { border-color: #5c4b1d; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:border-[#f3dc9b]"] { border-color: #5c4b1d; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:border-[#f3dc9b]"] { border-color: #5c4b1d; }
+    :where([data-theme="dark"]) [class~="border-[#f3dfa6]"] { border-color: #5c4b1d; }
+    :where([data-theme="dark"]) [class~="hover:border-[#f3dfa6]"]:hover { border-color: #5c4b1d; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:border-[#f3dfa6]"] { border-color: #5c4b1d; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:border-[#f3dfa6]"] { border-color: #5c4b1d; }
+    :where([data-theme="dark"]) [class~="border-[#f1d264]"] { border-color: #7a6420; }
+    :where([data-theme="dark"]) [class~="hover:border-[#f1d264]"]:hover { border-color: #7a6420; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:border-[#f1d264]"] { border-color: #7a6420; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:border-[#f1d264]"] { border-color: #7a6420; }
+    :where([data-theme="dark"]) [class~="border-[#bfe8cf]"] { border-color: #1f4a33; }
+    :where([data-theme="dark"]) [class~="hover:border-[#bfe8cf]"]:hover { border-color: #1f4a33; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:border-[#bfe8cf]"] { border-color: #1f4a33; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:border-[#bfe8cf]"] { border-color: #1f4a33; }
+    :where([data-theme="dark"]) [class~="border-[#bfe6cf]"] { border-color: #1f4a33; }
+    :where([data-theme="dark"]) [class~="hover:border-[#bfe6cf]"]:hover { border-color: #1f4a33; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:border-[#bfe6cf]"] { border-color: #1f4a33; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:border-[#bfe6cf]"] { border-color: #1f4a33; }
+    :where([data-theme="dark"]) [class~="border-[#bfe7cf]"] { border-color: #1f4a33; }
+    :where([data-theme="dark"]) [class~="hover:border-[#bfe7cf]"]:hover { border-color: #1f4a33; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:border-[#bfe7cf]"] { border-color: #1f4a33; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:border-[#bfe7cf]"] { border-color: #1f4a33; }
+    :where([data-theme="dark"]) [class~="border-[#cfe0fb]"] { border-color: #263a5e; }
+    :where([data-theme="dark"]) [class~="hover:border-[#cfe0fb]"]:hover { border-color: #263a5e; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:border-[#cfe0fb]"] { border-color: #263a5e; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:border-[#cfe0fb]"] { border-color: #263a5e; }
+    :where([data-theme="dark"]) [class~="border-[#cfc6e2]"] { border-color: #3b3252; }
+    :where([data-theme="dark"]) [class~="hover:border-[#cfc6e2]"]:hover { border-color: #3b3252; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:border-[#cfc6e2]"] { border-color: #3b3252; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:border-[#cfc6e2]"] { border-color: #3b3252; }
+    :where([data-theme="dark"]) [class~="border-[#c8457e]"] { border-color: #b04a7c; }
+    :where([data-theme="dark"]) [class~="hover:border-[#c8457e]"]:hover { border-color: #b04a7c; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:border-[#c8457e]"] { border-color: #b04a7c; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:border-[#c8457e]"] { border-color: #b04a7c; }
+    :where([data-theme="dark"]) [class~="border-[#f6b6cb]"] { border-color: #6b2c47; }
+    :where([data-theme="dark"]) [class~="hover:border-[#f6b6cb]"]:hover { border-color: #6b2c47; }
+    :where([data-theme="dark"]) .group:hover [class~="group-hover:border-[#f6b6cb]"] { border-color: #6b2c47; }
+    :where([data-theme="dark"]) .peer:checked ~ [class~="peer-checked:border-[#f6b6cb]"] { border-color: #6b2c47; }
   }
 }

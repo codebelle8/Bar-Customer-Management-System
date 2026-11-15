@@ -1,13 +1,16 @@
 import type { ReactNode } from 'react'
+import { cookies } from 'next/headers'
 import { and, count, eq, lte, ne } from 'drizzle-orm'
 import { Sidebar, Topbar, type Notice } from '@/components/shell'
 import * as t from '@/db/schema'
 import { query, requireCtx } from '@/lib/dal'
 import { addDays, fmtJaDate } from '@/lib/format'
 import { businessDateOf } from '@/lib/pricing'
+import { THEME_COOKIE, parseThemePref } from '@/lib/theme'
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const ctx = await requireCtx()
+  const themePref = parseThemePref((await cookies()).get(THEME_COOKIE)?.value)
   const { today, notices } = await query(async (tx) => {
     const [s] = await tx.select().from(t.storeSettings).where(eq(t.storeSettings.storeId, ctx.storeId))
     const today = businessDateOf(new Date(), s)
@@ -39,6 +42,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           roleLabel={ctx.isOwner ? 'オーナー' : 'スタッフ'}
           dateLabel={fmtJaDate(today)}
           notices={notices}
+          themePref={themePref}
         />
         <main className="flex-1 px-4 py-6 lg:px-8">{children}</main>
       </div>
