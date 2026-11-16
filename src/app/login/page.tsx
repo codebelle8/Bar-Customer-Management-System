@@ -10,7 +10,8 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
   const sp = await searchParams
   const themePref = parseThemePref((await cookies()).get(THEME_COOKIE)?.value)
   const next = typeof sp.next === 'string' ? sp.next : ''
-  const demo = (process.env.SEED_MODE ?? (process.env.DATABASE_URL ? 'clean' : 'demo')) === 'demo'
+  // 確認用アカウントの案内は手元の開発環境（組み込み DB）のときだけ表示。公開環境ではアカウントを個別にお知らせする
+  const demo = !process.env.DATABASE_URL && (process.env.SEED_MODE ?? 'demo') === 'demo'
   return (
     <main className="flex min-h-screen">
       <section className="relative hidden flex-1 overflow-hidden bg-side lg:block">
