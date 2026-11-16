@@ -1,0 +1,7 @@
+# Vercel へアップロードしないもの（開発用 DB・環境変数ファイル・ビルド成果物）
+.data
+.env*
+!.env.example
+.next
+node_modules
+*.tsbuildinfo

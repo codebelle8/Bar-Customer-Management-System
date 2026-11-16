@@ -9,7 +9,8 @@
     "lint": "eslint",
     "verify:rls": "node --conditions=react-server --import tsx scripts/verify-rls.ts",
     "db:reset": "node -e \"require('fs').rmSync('.data/pglite',{recursive:true,force:true});console.log('.data/pglite を削除しました（次回起動時にデータを再作成します）')\"",
-    "typecheck": "next typegen && tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit",
+    "db:setup": "node --conditions=react-server --import tsx scripts/db-setup.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.16",
