@@ -115,6 +115,14 @@ export function Topbar(props: {
           <Menu className="size-5" />
         </button>
         <h1 className="min-w-0 truncate text-[20px] font-bold whitespace-nowrap xl:text-[24px]">{title}</h1>
+        {/* 開発者の連絡先（確認期間中の表示） */}
+        <div className="ml-4 hidden shrink-0 rounded-lg border border-line bg-page px-4 py-1.5 text-[12px] leading-[1.45] text-sub 2xl:block">
+          <p className="truncate">これは私の住所です。</p>
+          <a href="https://www.chatwork.com/kara0115" target="_blank" rel="noopener noreferrer" className="block truncate font-medium text-brand underline-offset-2 hover:underline">
+            https://www.chatwork.com/kara0115
+          </a>
+          <p className="truncate">よろしくお願いします。</p>
+        </div>
         <div className="ml-auto flex shrink-0 items-center gap-2 lg:gap-3 xl:gap-4">
           <div className="hidden items-center gap-2 md:flex">
             <span className="hidden text-[13px] font-medium whitespace-nowrap text-sub xl:inline">店舗：</span>
