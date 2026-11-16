@@ -45,22 +45,15 @@ function NavList({ isOwner, onNavigate }: { isOwner: boolean; onNavigate?: () =>
   )
 }
 
-/** 開発者の連絡先（確認期間中の表示）。上部バーとサイドバーで同じ内容を表示する */
-const DEV_CONTACT_URL = 'https://www.chatwork.com/kara0115'
-function DeveloperNote({ variant, className }: { variant: 'bar' | 'side'; className?: string }) {
-  const side = variant === 'side'
+/** 開発者の連絡先（確認期間中の表示・サイドバー） */
+function DeveloperNote({ className }: { className?: string }) {
   return (
-    <div className={cx(
-      'rounded-lg border px-4 py-1.5 text-[12px] leading-[1.45]',
-      side ? 'border-white/15 bg-white/5 py-3 leading-relaxed text-[#d9cff0]' : 'border-line bg-page text-sub',
-      className,
-    )}>
-      <p className="truncate">これは私の住所です。</p>
-      <a href={DEV_CONTACT_URL} target="_blank" rel="noopener noreferrer"
-        className={cx('block font-medium underline-offset-2 hover:underline', side ? 'text-brand-light' : 'truncate text-brand')}>
-        {side ? <>https://www.chatwork.com/<wbr />kara0115</> : DEV_CONTACT_URL}
+    <div className={cx('rounded-lg border border-white/15 bg-side/85 px-4 py-3 backdrop-blur-sm text-[12px] leading-relaxed text-[#d9cff0]', className)}>
+      <p>これは私の住所です。</p>
+      <a href="https://www.chatwork.com/kara0115" target="_blank" rel="noopener noreferrer" className="block font-medium text-brand-light underline-offset-2 hover:underline">
+        https://www.chatwork.com/<wbr />kara0115
       </a>
-      <p className="truncate">よろしくお願いします。</p>
+      <p>よろしくお願いします。</p>
     </div>
   )
 }
@@ -74,7 +67,7 @@ function SidebarBody({ isOwner, onNavigate }: { isOwner: boolean; onNavigate?: (
       </Link>
       <div className="relative z-10 scrollbar-thin flex-1 overflow-y-auto pb-40">
         <NavList isOwner={isOwner} onNavigate={onNavigate} />
-        <DeveloperNote variant="side" className="mx-3 mt-6" />
+        <DeveloperNote className="mx-3 mt-6" />
       </div>
       {/* 下部の店内写真（店舗サイトの写真。上端はサイドバーの色になじませる） */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-56">
@@ -136,7 +129,6 @@ export function Topbar(props: {
           <Menu className="size-5" />
         </button>
         <h1 className="min-w-0 truncate text-[20px] font-bold whitespace-nowrap xl:text-[24px]">{title}</h1>
-        <DeveloperNote variant="bar" className="ml-4 hidden shrink-0 2xl:block" />
         <div className="ml-auto flex shrink-0 items-center gap-2 lg:gap-3 xl:gap-4">
           <div className="hidden items-center gap-2 md:flex">
             <span className="hidden text-[13px] font-medium whitespace-nowrap text-sub xl:inline">店舗：</span>
