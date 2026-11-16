@@ -45,19 +45,6 @@ function NavList({ isOwner, onNavigate }: { isOwner: boolean; onNavigate?: () =>
   )
 }
 
-/** 開発者の連絡先（確認期間中の表示・サイドバー） */
-function DeveloperNote({ className }: { className?: string }) {
-  return (
-    <div className={cx('rounded-lg border border-white/15 bg-side/85 px-4 py-3 backdrop-blur-sm text-[12px] leading-relaxed text-[#d9cff0]', className)}>
-      <p>これは私の住所です。</p>
-      <a href="https://www.chatwork.com/kara0115" target="_blank" rel="noopener noreferrer" className="block font-medium text-brand-light underline-offset-2 hover:underline">
-        https://www.chatwork.com/<wbr />kara0115
-      </a>
-      <p>よろしくお願いします。</p>
-    </div>
-  )
-}
-
 function SidebarBody({ isOwner, onNavigate }: { isOwner: boolean; onNavigate?: () => void }) {
   return (
     <div className="relative flex h-full flex-col overflow-hidden bg-gradient-to-b from-side via-side-2 to-side-3">
@@ -67,7 +54,6 @@ function SidebarBody({ isOwner, onNavigate }: { isOwner: boolean; onNavigate?: (
       </Link>
       <div className="relative z-10 scrollbar-thin flex-1 overflow-y-auto pb-40">
         <NavList isOwner={isOwner} onNavigate={onNavigate} />
-        <DeveloperNote className="mx-3 mt-6" />
       </div>
       {/* 下部の店内写真（店舗サイトの写真。上端はサイドバーの色になじませる） */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-56">
