@@ -7,22 +7,50 @@ import { Badge, Button, Field, Input, Select, cx } from '@/components/ui'
 import { ActionForm, FormMessage, SecretBox, SubmitButton, useFormCtx } from '@/components/settings/form'
 import { Switch } from '@/components/settings/fields'
 import { generatePassword } from '@/components/settings/password'
+import { ROLE_DESC, ROLE_LABEL, type Role } from '@/lib/roles'
 import { createStaff, resetPassword, updateStaff } from './actions'
 
 type StoreOpt = { id: string; name: string }
 
+const ROLE_TONE = { owner: 'purple', store_owner: 'pink', staff: 'blue' } as const
+
+/** 権限の選択（全店舗のオーナーのみ。店舗オーナーが追加・編集できるのはスタッフのみ） */
+function RoleSelect({ role, setRole, disabled }: { role: Role; setRole: (r: Role) => void; disabled?: boolean }) {
+  return (
+    <Select name="role" value={role} onChange={(e) => setRole(e.target.value as Role)} disabled={disabled}>
+      {(['staff', 'store_owner', 'owner'] as const).map((r) => <option key={r} value={r}>{ROLE_DESC[r]}</option>)}
+    </Select>
+  )
+}
+
+/** 所属店舗の選択（全店舗のオーナーは店舗を選択、店舗オーナーは所属店舗に固定） */
+function StoreSelect({ stores, role, defaultValue, allStores }: { stores: StoreOpt[]; role: Role; defaultValue: string; allStores: boolean }) {
+  if (!allStores)
+    return (
+      <>
+        <Input value={stores[0]?.name ?? ''} disabled readOnly />
+        <input type="hidden" name="storeId" value={stores[0]?.id ?? ''} />
+      </>
+    )
+  return (
+    <Select name="storeId" defaultValue={defaultValue} disabled={role === 'owner'} required={role !== 'owner'}>
+      {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+    </Select>
+  )
+}
+
 /* ------------------------------ 追加 ------------------------------ */
 
-export function CreateStaffForm({ stores, defaultStoreId }: { stores: StoreOpt[]; defaultStoreId: string }) {
+export function CreateStaffForm({ stores, defaultStoreId, allStores }: { stores: StoreOpt[]; defaultStoreId: string; allStores: boolean }) {
   return (
     <ActionForm action={createStaff} resetOnSuccess message="none" className="space-y-4">
-      <CreateFields stores={stores} defaultStoreId={defaultStoreId} />
+      <CreateFields stores={stores} defaultStoreId={defaultStoreId} allStores={allStores} />
     </ActionForm>
   )
 }
 
-function CreateFields({ stores, defaultStoreId }: { stores: StoreOpt[]; defaultStoreId: string }) {
-  const [role, setRole] = useState<'staff' | 'owner'>('staff')
+function CreateFields({ stores, defaultStoreId, allStores }: { stores: StoreOpt[]; defaultStoreId: string; allStores: boolean }) {
+  const [role, setRole] = useState<Role>('staff')
   const [password, setPassword] = useState('')
   const [show, setShow] = useState(false)
   const { state } = useFormCtx()
@@ -38,20 +66,20 @@ function CreateFields({ stores, defaultStoreId }: { stores: StoreOpt[]; defaultS
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="名前" required><Input name="name" maxLength={30} placeholder="例：上野スタッフC" required /></Field>
+        <Field label="名前" required><Input name="name" maxLength={30} placeholder="例：スタッフC" required /></Field>
         <Field label="ログインID" required hint="半角英小文字・数字・「_」「-」の3〜32文字">
-          <Input name="loginId" pattern="[a-z0-9_\-]{3,32}" minLength={3} maxLength={32} autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder="ueno03" required />
+          <Input name="loginId" pattern="[a-z0-9_\-]{3,32}" minLength={3} maxLength={32} autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder="staff03" required />
         </Field>
-        <Field label="権限">
-          <Select name="role" value={role} onChange={(e) => setRole(e.target.value as 'staff' | 'owner')}>
-            <option value="staff">スタッフ（所属店舗のみ）</option>
-            <option value="owner">オーナー（全店舗・全機能）</option>
-          </Select>
+        <Field label="権限" hint={allStores ? undefined : '店舗オーナーが追加できるのはスタッフのみです'}>
+          {allStores ? <RoleSelect role={role} setRole={setRole} /> : (
+            <>
+              <Input value={ROLE_DESC.staff} disabled readOnly />
+              <input type="hidden" name="role" value="staff" />
+            </>
+          )}
         </Field>
-        <Field label="所属店舗" required={role === 'staff'} hint={role === 'owner' ? 'オーナーは全店舗を利用できます' : undefined}>
-          <Select name="storeId" defaultValue={defaultStoreId} disabled={role === 'owner'} required={role === 'staff'}>
-            {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </Select>
+        <Field label="所属店舗" required={role !== 'owner'} hint={role === 'owner' ? 'オーナー（全店舗）は全店舗を利用できます' : undefined}>
+          <StoreSelect stores={stores} role={role} defaultValue={defaultStoreId} allStores={allStores} />
         </Field>
       </div>
       <Field label="初期パスワード" required hint="8文字以上。作成後に本人へ伝え、ログイン後に変更してもらってください">
@@ -83,7 +111,7 @@ export interface StaffRowData {
   id: string
   name: string
   loginId: string
-  role: 'owner' | 'staff'
+  role: Role
   storeId: string | null
   storeName: string
   active: boolean
@@ -91,7 +119,9 @@ export interface StaffRowData {
   created: string
 }
 
-export function StaffRow({ u, stores, self }: { u: StaffRowData; stores: StoreOpt[]; self: boolean }) {
+export function StaffRow({ u, stores, self, allStores }: { u: StaffRowData; stores: StoreOpt[]; self: boolean; allStores: boolean }) {
+  // 店舗オーナーが編集できるのは、所属店舗のスタッフと自分自身のみ
+  const canEdit = allStores || self || u.role === 'staff'
   const [mode, setMode] = useState<'none' | 'edit' | 'reset'>('none')
   return (
     <>
@@ -101,12 +131,13 @@ export function StaffRow({ u, stores, self }: { u: StaffRowData; stores: StoreOp
           {self && <Badge tone="purple" className="ml-2">あなた</Badge>}
         </td>
         <td className="px-2 py-3 xl:px-3 font-mono text-[13px] whitespace-nowrap">{u.loginId}</td>
-        <td className="px-2 py-3 xl:px-3 whitespace-nowrap">{u.role === 'owner' ? <Badge tone="purple">オーナー</Badge> : <Badge tone="blue">スタッフ</Badge>}</td>
+        <td className="px-2 py-3 xl:px-3 whitespace-nowrap"><Badge tone={ROLE_TONE[u.role]}>{ROLE_LABEL[u.role]}</Badge></td>
         <td className="px-2 py-3 xl:px-3 whitespace-nowrap">{u.role === 'owner' ? <span className="text-sub">全店舗</span> : u.storeName}</td>
         <td className="px-2 py-3 xl:px-3 whitespace-nowrap">{u.active ? <Badge tone="green">有効</Badge> : <Badge tone="gray">無効</Badge>}</td>
         <td className="px-2 py-3 xl:px-3 whitespace-nowrap text-sub tabular-nums">{u.lastLogin}</td>
         <td className="px-2 py-3 xl:px-3 text-right whitespace-nowrap">
-          <div className="inline-flex flex-col items-stretch gap-1.5 xl:flex-row">
+          {!canEdit && <span className="text-[12px] text-mute">全店舗のオーナーが管理</span>}
+          {canEdit && <div className="inline-flex flex-col items-stretch gap-1.5 xl:flex-row">
             <Button size="sm" variant={mode === 'edit' ? 'soft' : 'default'} onClick={() => setMode(mode === 'edit' ? 'none' : 'edit')}>
               <Pencil className="size-3.5" />編集
             </Button>
@@ -115,7 +146,7 @@ export function StaffRow({ u, stores, self }: { u: StaffRowData; stores: StoreOp
                 <KeyRound className="size-3.5" /><span className="xl:hidden">再発行</span><span className="hidden xl:inline">パスワード再発行</span>
               </Button>
             )}
-          </div>
+          </div>}
         </td>
       </tr>
       {mode !== 'none' && (
@@ -125,7 +156,7 @@ export function StaffRow({ u, stores, self }: { u: StaffRowData; stores: StoreOp
               <button type="button" onClick={() => setMode('none')} className="absolute top-3 right-3 rounded p-1 text-mute hover:bg-page hover:text-ink" aria-label="閉じる">
                 <X className="size-4" />
               </button>
-              {mode === 'edit' ? <EditForm u={u} stores={stores} self={self} /> : <ResetForm u={u} />}
+              {mode === 'edit' ? <EditForm u={u} stores={stores} self={self} allStores={allStores} /> : <ResetForm u={u} />}
             </div>
           </td>
         </tr>
@@ -134,25 +165,31 @@ export function StaffRow({ u, stores, self }: { u: StaffRowData; stores: StoreOp
   )
 }
 
-function EditForm({ u, stores, self }: { u: StaffRowData; stores: StoreOpt[]; self: boolean }) {
-  const [role, setRole] = useState(u.role)
+function EditForm({ u, stores, self, allStores }: { u: StaffRowData; stores: StoreOpt[]; self: boolean; allStores: boolean }) {
+  const [role, setRole] = useState<Role>(u.role)
+  // 権限・所属店舗を変更できるのは全店舗のオーナーのみ（自分自身は不可）
+  const fixed = self || !allStores
   return (
     <ActionForm action={updateStaff} message="none" className="space-y-4">
       <p className="text-[13px] font-bold">{u.name}（{u.loginId}）を編集</p>
       <input type="hidden" name="id" value={u.id} />
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
         <Field label="名前" required><Input name="name" defaultValue={u.name} maxLength={30} required /></Field>
-        <Field label="権限" hint={self ? '自分の権限は変更できません' : undefined}>
-          <Select name="role" value={role} onChange={(e) => setRole(e.target.value as 'staff' | 'owner')} disabled={self}>
-            <option value="staff">スタッフ</option>
-            <option value="owner">オーナー</option>
-          </Select>
-          {self && <input type="hidden" name="role" value="owner" />}
+        <Field label="権限" hint={self ? '自分の権限は変更できません' : !allStores ? '権限の変更は全店舗のオーナーのみ' : undefined}>
+          {fixed ? (
+            <>
+              <Input value={ROLE_LABEL[u.role]} disabled readOnly />
+              <input type="hidden" name="role" value={u.role} />
+            </>
+          ) : <RoleSelect role={role} setRole={setRole} />}
         </Field>
         <Field label="所属店舗">
-          <Select name="storeId" defaultValue={u.storeId ?? stores[0]?.id} disabled={role === 'owner'}>
-            {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </Select>
+          {fixed ? (
+            <>
+              <Input value={u.role === 'owner' ? '全店舗' : u.storeName} disabled readOnly />
+              <input type="hidden" name="storeId" value={u.storeId ?? ''} />
+            </>
+          ) : <StoreSelect stores={stores} role={role} defaultValue={u.storeId ?? stores[0]?.id ?? ''} allStores />}
         </Field>
         <div className="pb-2">
           {self ? (

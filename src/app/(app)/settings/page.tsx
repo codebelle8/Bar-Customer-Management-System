@@ -56,7 +56,7 @@ export default async function SettingsPage({ searchParams }: PageProps<'/setting
       <Tabs items={TABS} current={tab} hrefFor={(k) => (k === 'store' ? '/settings' : `/settings?tab=${k}`)} />
       <p className="flex items-center gap-2 text-[13px] text-sub">
         <Info className="size-4 text-brand" />
-        対象店舗：<b className="text-ink">{ctx.store.name}</b>{ctx.store.status === 'preparing' && <Badge tone="amber">準備中</Badge>}（上部の店舗切り替えで変更できます）
+        対象店舗：<b className="text-ink">{ctx.store.name}</b>{ctx.store.status === 'preparing' && <Badge tone="amber">準備中</Badge>}{ctx.allStores && '（上部の店舗切り替えで変更できます）'}
       </p>
 
       {tab === 'store' && (
@@ -77,7 +77,7 @@ export default async function SettingsPage({ searchParams }: PageProps<'/setting
               </li>
               <li className="flex gap-3">
                 <Lock className="mt-0.5 size-5 shrink-0 text-brand" />
-                <span><b>アクセス制御</b><br />データベース側で店舗ごとに制御しており、スタッフは所属店舗のデータしか読み書きできません。</span>
+                <span><b>アクセス制御</b><br />データベース側で店舗ごとに制御しており、店舗オーナー・スタッフは所属店舗のデータしか読み書きできません。</span>
               </li>
               <li className="flex gap-3">
                 <Database className="mt-0.5 size-5 shrink-0 text-brand" />

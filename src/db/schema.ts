@@ -4,7 +4,8 @@ import { boolean, date, integer, jsonb, pgTable, primaryKey, text, timestamp, uu
 export type DayType = '平日' | '週末' | '祝日' | 'イベント'
 export type DayPart = '昼' | '夜'
 export type Category = '男性' | '女性' | 'カップル'
-export type Role = 'owner' | 'staff'
+/** owner：全店舗のオーナー / store_owner：所属店舗のみのオーナー / staff：所属店舗のスタッフ */
+export type Role = 'owner' | 'store_owner' | 'staff'
 export type CustomPrices = Partial<Record<DayPart, Partial<Record<Category, number>>>>
 
 const ts = (name: string) => timestamp(name, { withTimezone: true, mode: 'date' })

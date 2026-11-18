@@ -55,10 +55,10 @@ const H = 7 // 日別表の開始列（H）
 const HEAD = 2 // 日別表の見出しの開始行（0 始まり＝3 行目）
 
 export async function GET(request: NextRequest) {
-  // オーナーのみ（未ログインはログイン画面へ、スタッフは 403）
+  // オーナー・店舗オーナーのみ（未ログインはログイン画面へ、スタッフは 403）。店舗オーナーは所属店舗のみ
   const user = await getCurrentUser()
   if (!user) redirect('/login')
-  if (user.role !== 'owner') return new Response('この操作はオーナーのみ利用できます', { status: 403, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
+  if (user.role === 'staff') return new Response('この操作はオーナーのみ利用できます', { status: 403, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
   const ctx = await requireCtx()
   const param = request.nextUrl.searchParams.get('month')
   if (param !== null && !isYm(param)) return new Response('month は YYYY-MM 形式で指定してください', { status: 400, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })

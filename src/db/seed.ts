@@ -8,7 +8,8 @@ import { businessDateOf, dayInfo, priceOf } from '../lib/pricing'
 import { addDays, addMonths, weekdayOf } from '../lib/format'
 import october from './seed-data/october-2026.json'
 
-const UENO = 'ueno'
+// 店舗の内部ID（画面には表示しない。既存データとの互換のため値は変えない）
+const HARNES = 'ueno'
 const NEW_STORE = 'new'
 
 // 料金表（仮）：店舗から正式な料金表を受領後、「料金設定・カレンダー」で変更してください
@@ -59,10 +60,11 @@ export async function ensureSeed(db: DB) {
 
 async function seedBase(db: DB, demo: boolean) {
   await db.insert(t.stores).values([
-    { id: UENO, name: 'ハーネス東京（上野）', shortName: '上野店', status: 'active', memberPrefix: 'H-' },
+    // 店舗名は「設定 → 店舗情報」で変更可能（新店舗は正式な屋号が決まりしだい変更）
+    { id: HARNES, name: 'ハーネス東京', shortName: 'ハーネス', status: 'active', memberPrefix: 'H-' },
     { id: NEW_STORE, name: '新店', shortName: '新店', status: 'preparing', memberPrefix: 'N-' },
   ])
-  for (const storeId of [UENO, NEW_STORE]) {
+  for (const storeId of [HARNES, NEW_STORE]) {
     await db.insert(t.storeSettings).values({
       storeId, dayStart: '12:00', nightStart: '19:00', dayCutoff: '06:00', weekendDays: [0, 6], joinFee: 2000,
       discountEnabled: true, discountMinVisits: 4, discountAmount: 2000, discountGender: '男性', discountScope: 'every',
@@ -80,20 +82,21 @@ async function seedBase(db: DB, demo: boolean) {
   if (demo) {
     // デモ：10月の Excel 備考にあるイベント（3日間ビンゴ・ネイルイベント）のみ。架空の予定は入れない
     await db.insert(t.calendarDays).values([
-      { storeId: UENO, date: '2026-10-09', dayType: 'イベント', label: 'ビンゴイベント（3日間）' },
-      { storeId: UENO, date: '2026-10-10', dayType: 'イベント', label: 'ビンゴイベント（3日間）' },
-      { storeId: UENO, date: '2026-10-11', dayType: 'イベント', label: 'ビンゴイベント（3日間）' },
-      { storeId: UENO, date: '2026-10-27', dayType: 'イベント', label: 'ネイルイベント' },
+      { storeId: HARNES, date: '2026-10-09', dayType: 'イベント', label: 'ビンゴイベント（3日間）' },
+      { storeId: HARNES, date: '2026-10-10', dayType: 'イベント', label: 'ビンゴイベント（3日間）' },
+      { storeId: HARNES, date: '2026-10-11', dayType: 'イベント', label: 'ビンゴイベント（3日間）' },
+      { storeId: HARNES, date: '2026-10-27', dayType: 'イベント', label: 'ネイルイベント' },
     ])
   }
 
   if (demo) {
     const hash = (p: string) => bcrypt.hashSync(p, 10)
     await db.insert(t.users).values([
+      // 全店舗のオーナー・ハーネスの店舗オーナー・ハーネスのスタッフ（共用1つ）・新店のスタッフ
       { loginId: 'owner', name: 'オーナー', passwordHash: hash('owner1234'), role: 'owner' },
-      { loginId: 'ueno01', name: '上野スタッフA', passwordHash: hash('staff1234'), role: 'staff', storeId: UENO },
-      { loginId: 'ueno02', name: '上野スタッフB', passwordHash: hash('staff1234'), role: 'staff', storeId: UENO },
-      { loginId: 'new01', name: '新店スタッフA', passwordHash: hash('staff1234'), role: 'staff', storeId: NEW_STORE },
+      { loginId: 'harnes-owner', name: 'ハーネス オーナー', passwordHash: hash('owner1234'), role: 'store_owner', storeId: HARNES },
+      { loginId: 'harnes-staff', name: 'ハーネス スタッフ', passwordHash: hash('staff1234'), role: 'staff', storeId: HARNES },
+      { loginId: 'new01', name: '新店スタッフ', passwordHash: hash('staff1234'), role: 'staff', storeId: NEW_STORE },
     ])
   } else {
     const pw = process.env.INITIAL_OWNER_PASSWORD ?? Math.random().toString(36).slice(2, 12)
@@ -114,12 +117,14 @@ async function seedDemo(db: DB) {
   const rand = rng(20261115)
   const ri = (a: number, b: number) => a + Math.floor(rand() * (b - a + 1))
   const pick = <T,>(a: T[]) => a[Math.floor(rand() * a.length)]
-  const [settings] = await db.select().from(t.storeSettings).where(eq(t.storeSettings.storeId, UENO))
+  const [settings] = await db.select().from(t.storeSettings).where(eq(t.storeSettings.storeId, HARNES))
   const rules = await db.select().from(t.priceRules)
-  const ueRules = rules.filter((r) => r.storeId === UENO)
-  const overrides = new Map<string, CalendarDay>((await db.select().from(t.calendarDays)).filter((c) => c.storeId === UENO).map((c) => [c.date, c]))
-  const [owner, staffA, staffB] = await db.select().from(t.users)
-  const staffIds = [staffA.id, staffB.id]
+  const ueRules = rules.filter((r) => r.storeId === HARNES)
+  const overrides = new Map<string, CalendarDay>((await db.select().from(t.calendarDays)).filter((c) => c.storeId === HARNES).map((c) => [c.date, c]))
+  const users = await db.select().from(t.users)
+  const owner = users.find((u) => u.role === 'owner')!
+  // デモの受付担当：ハーネスのアカウント（店舗オーナー・スタッフ）
+  const staffIds = users.filter((u) => u.storeId === HARNES).map((u) => u.id)
   const now = new Date()
   const todayBiz = businessDateOf(now, settings)
 
@@ -141,7 +146,7 @@ async function seedDemo(db: DB) {
     const gender: '男性' | '女性' = rand() < 0.62 ? '男性' : '女性'
     const joinedAt = i >= 300 ? newJoinDates[i - 300] : addDays('2022-01-10', ri(0, 1700))
     members.push({
-      id: crypto.randomUUID(), storeId: UENO, memberNo: `H-${no++}`, handleName: handle(gender), gender,
+      id: crypto.randomUUID(), storeId: HARNES, memberNo: `H-${no++}`, handleName: handle(gender), gender,
       birthday: `${ri(1965, 2004)}-${String(ri(1, 12)).padStart(2, '0')}-${String(ri(1, 28)).padStart(2, '0')}`,
       joinedAt, referral: pick(REFERRALS), idDocs: [pick(['運転免許証', '運転免許証', 'マイナンバーカード', 'パスポート']), '健康保険証'],
       termsVersion: i >= 300 ? '2026.11' : '紙', termsSignedAt: jstAt(joinedAt, 20 * 60), status: 'active', createdBy: owner.id,
@@ -158,7 +163,7 @@ async function seedDemo(db: DB) {
   members.slice(0, 2).forEach((m) => (m.memo = 'プライバシー重視。番号で呼ぶこと。'))
   await chunked(members.map(({ weight: _w, ...m }) => m), 200, (rows) => db.insert(t.members).values(rows))
   // 次に発行する会員番号（デモ会員の続きから）
-  await db.update(t.storeSettings).set({ nextMemberNo: no }).where(eq(t.storeSettings.storeId, UENO))
+  await db.update(t.storeSettings).set({ nextMemberNo: no }).where(eq(t.storeSettings.storeId, HARNES))
 
   const active = members.filter((m) => m.status === 'active')
   const newOn = new Map<string, M>()
@@ -189,7 +194,7 @@ async function seedDemo(db: DB) {
       const amount = k === list.length - 1 ? total - acc : Math.round(total / list.length / 100) * 100
       acc += amount
       if (amount <= 0) return
-      items.push({ storeId: UENO, visitId: v.id, kind, name, unitPrice: amount, qty: 1, amount, businessDate: date, dayPart: part, staffId: pick(staffIds), createdAt: new Date(v.checkedInAt!.getTime() + 3 * 3600000) })
+      items.push({ storeId: HARNES, visitId: v.id, kind, name, unitPrice: amount, qty: 1, amount, businessDate: date, dayPart: part, staffId: pick(staffIds), createdAt: new Date(v.checkedInAt!.getTime() + 3 * 3600000) })
       if (v.status === 'out') v.extraTotal = (v.extraTotal ?? 0) + amount
     })
   }
@@ -265,7 +270,7 @@ async function seedDemo(db: DB) {
       const outAt = jstAt(date, inMin + ri(18, 60) * 5)
       const join = v.isNew && entranceTarget === null ? settings.joinFee : 0
       const row: V = {
-        id: crypto.randomUUID(), storeId: UENO, memberId: v.member.id, partnerMemberId: v.partner?.id ?? null, businessDate: date,
+        id: crypto.randomUUID(), storeId: HARNES, memberId: v.member.id, partnerMemberId: v.partner?.id ?? null, businessDate: date,
         dayPart: part, dayType: day.type, category: v.cat, isNew: v.isNew, entranceFee: fees[i], discount: discounts[i],
         discountReason: discounts[i] ? `前月${settings.discountMinVisits}回以上来店 リピーター割引` : '', joinFee: join, annualFee: 0,
         entryTotal: fees[i] - discounts[i] + join, extraTotal: 0, status: outAt > now ? 'in' : 'out', checkedInAt,
@@ -285,7 +290,7 @@ async function seedDemo(db: DB) {
         rest -= m.price
         continue
       }
-      items.push({ storeId: UENO, visitId: v.id, kind: 'drink', name: m.name, unitPrice: m.price, qty: 1, amount: m.price, businessDate: date, dayPart: part, staffId: pick(staffIds), createdAt: at })
+      items.push({ storeId: HARNES, visitId: v.id, kind: 'drink', name: m.name, unitPrice: m.price, qty: 1, amount: m.price, businessDate: date, dayPart: part, staffId: pick(staffIds), createdAt: at })
       if (v.status === 'out') v.extraTotal = (v.extraTotal ?? 0) + m.price
       rest -= m.price
     }
@@ -299,7 +304,7 @@ async function seedDemo(db: DB) {
     const usedToday = new Set<string>()
     makePart(r.date, '昼', { 男性: r.maleDay, 女性: r.femaleDay, カップル: r.cpDay }, r.drinkDay, r.salesDay - r.drinkDay, usedToday)
     makePart(r.date, '夜', { 男性: r.maleNight, 女性: r.femaleNight, カップル: r.cpNight }, r.drinkNight, r.salesNight - r.drinkNight, usedToday)
-    if (r.expense) expenseRows.push({ storeId: UENO, businessDate: r.date, kind: 'expense', name: r.memo || '経費', amount: r.expense, staffId: pick(staffIds) })
+    if (r.expense) expenseRows.push({ storeId: HARNES, businessDate: r.date, kind: 'expense', name: r.memo || '経費', amount: r.expense, staffId: pick(staffIds) })
   }
 
   // 11月〜本日：10月の曜日別の平均をもとに作成（料金表・割引を適用）
@@ -319,16 +324,16 @@ async function seedDemo(db: DB) {
     makePart(d, '夜', { 男性: v(3), 女性: v(4), カップル: v(5) }, Math.round(v(7) / 100) * 100, null, usedToday)
     if (d < todayBiz && rand() < 0.7) {
       const [name, amt] = pick(EXPENSE_POOL)
-      expenseRows.push({ storeId: UENO, businessDate: d, kind: 'expense', name, amount: Math.round((amt * (0.6 + rand())) / 100) * 100, staffId: pick(staffIds) })
+      expenseRows.push({ storeId: HARNES, businessDate: d, kind: 'expense', name, amount: Math.round((amt * (0.6 + rand())) / 100) * 100, staffId: pick(staffIds) })
     }
-    if (d < todayBiz && weekdayOf(d) === 6) expenseRows.push({ storeId: UENO, businessDate: d, kind: 'parttime', name: 'アルバイト代', amount: 12000, staffId: pick(staffIds) })
+    if (d < todayBiz && weekdayOf(d) === 6) expenseRows.push({ storeId: HARNES, businessDate: d, kind: 'parttime', name: 'アルバイト代', amount: 12000, staffId: pick(staffIds) })
   }
 
   await chunked(visits, 300, (rows) => db.insert(t.visits).values(rows))
   await chunked(items, 500, (rows) => db.insert(t.visitItems).values(rows))
   if (expenseRows.length) await chunked(expenseRows, 300, (rows) => db.insert(t.expenses).values(rows))
   await db.insert(t.monthlyAdjustments).values(
-    ['龍経費', '46経費', '口座移動'].map((label, i) => ({ storeId: UENO, month: '2026-10', label, amount: 0, sort: i })),
+    ['龍経費', '46経費', '口座移動'].map((label, i) => ({ storeId: HARNES, month: '2026-10', label, amount: 0, sort: i })),
   )
-  await db.insert(t.auditLogs).values({ storeId: UENO, userId: owner.id, userName: owner.name, action: 'デモデータ作成', target: `会員 ${members.length}名・来店 ${visits.length}件` })
+  await db.insert(t.auditLogs).values({ storeId: HARNES, userId: owner.id, userName: owner.name, action: 'デモデータ作成', target: `会員 ${members.length}名・来店 ${visits.length}件` })
 }

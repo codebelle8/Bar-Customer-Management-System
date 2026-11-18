@@ -42,8 +42,9 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
           {demo && (
             <div className="mt-5 rounded-xl border border-dashed border-brand-light bg-white/70 p-4 text-[12px] leading-relaxed text-sub">
               <p className="mb-1 font-bold text-brand">確認用アカウント（デモデータ）</p>
-              <p>オーナー：owner / owner1234</p>
-              <p>上野店スタッフ：ueno01 / staff1234</p>
+              <p>オーナー（全店舗）：owner / owner1234</p>
+              <p>ハーネスのオーナー：harnes-owner / owner1234</p>
+              <p>ハーネスのスタッフ：harnes-staff / staff1234</p>
               <p>新店スタッフ：new01 / staff1234</p>
             </div>
           )}

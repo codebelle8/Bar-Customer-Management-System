@@ -6,6 +6,7 @@ import * as t from '@/db/schema'
 import { query, requireCtx } from '@/lib/dal'
 import { addDays, fmtJaDate } from '@/lib/format'
 import { businessDateOf } from '@/lib/pricing'
+import { ROLE_LABEL } from '@/lib/roles'
 import { THEME_COOKIE, parseThemePref } from '@/lib/theme'
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
@@ -35,11 +36,12 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar
           isOwner={ctx.isOwner}
+          canSwitchStore={ctx.allStores}
           stores={ctx.stores.map((s) => ({ id: s.id, name: s.name, status: s.status }))}
           storeId={ctx.storeId}
           storeName={ctx.store.name}
           userName={ctx.user.name}
-          roleLabel={ctx.isOwner ? 'オーナー' : 'スタッフ'}
+          roleLabel={ROLE_LABEL[ctx.user.role]}
           dateLabel={fmtJaDate(today)}
           notices={notices}
           themePref={themePref}

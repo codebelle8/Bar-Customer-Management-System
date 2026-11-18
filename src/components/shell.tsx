@@ -91,6 +91,8 @@ export interface Notice {
 
 export function Topbar(props: {
   isOwner: boolean
+  /** 全店舗のオーナーのみ店舗を切り替えられる */
+  canSwitchStore: boolean
   stores: { id: string; name: string; status: string }[]
   storeId: string
   storeName: string
@@ -100,7 +102,7 @@ export function Topbar(props: {
   notices: Notice[]
   themePref: ThemePref
 }) {
-  const { isOwner, stores, storeId, storeName, userName, roleLabel, dateLabel, notices, themePref } = props
+  const { isOwner, canSwitchStore, stores, storeId, storeName, userName, roleLabel, dateLabel, notices, themePref } = props
   const pathname = usePathname()
   const title = NAV.find((n) => pathname === n.href || pathname.startsWith(`${n.href}/`))?.label ?? ''
   const [menu, setMenu] = useState(false)
@@ -118,7 +120,7 @@ export function Topbar(props: {
         <div className="ml-auto flex shrink-0 items-center gap-2 lg:gap-3 xl:gap-4">
           <div className="hidden items-center gap-2 md:flex">
             <span className="hidden text-[13px] font-medium whitespace-nowrap text-sub xl:inline">店舗：</span>
-            {isOwner ? (
+            {canSwitchStore ? (
               <form action={selectStore}>
                 <input type="hidden" name="back" value={pathname} />
                 <select name="storeId" defaultValue={storeId} onChange={(e) => e.currentTarget.form?.requestSubmit()}

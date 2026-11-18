@@ -7,23 +7,28 @@ import { redirect } from 'next/navigation'
 import { and, asc, eq } from 'drizzle-orm'
 import { getDb, withRls, type Tx } from '@/db/client'
 import * as t from '@/db/schema'
+import type { Role } from './roles'
 import { SESSION_COOKIE, STORE_COOKIE, verifySession } from './session'
 
 export interface CurrentUser {
   id: string
   name: string
   loginId: string
-  role: 'owner' | 'staff'
+  role: Role
   storeId: string | null
 }
 
 export interface Ctx {
   user: CurrentUser
-  /** 表示・操作の対象店舗（スタッフは所属店舗に固定） */
+  /** 表示・操作の対象店舗（店舗オーナー・スタッフは所属店舗に固定） */
   storeId: string
   store: t.Store
+  /** 利用できる店舗（全店舗のオーナーのみ複数） */
   stores: t.Store[]
+  /** オーナー権限（全店舗のオーナー・店舗オーナー）：料金設定・レポート・スタッフ管理・設定など */
   isOwner: boolean
+  /** 全店舗のオーナー：店舗の切り替え・オーナーアカウントの管理 */
+  allStores: boolean
 }
 
 /** パスワードハッシュの指紋（セッションに含め、パスワードが変わったら既存のログインを無効にする） */
@@ -44,20 +49,23 @@ export const requireCtx = cache(async (): Promise<Ctx> => {
   const user = await getCurrentUser()
   if (!user) redirect('/api/session-end')
   const db = await getDb()
-  const all = await db.select().from(t.stores).orderBy(asc(t.stores.createdAt), asc(t.stores.id))
+  // 並び順：営業中の店舗 → 準備中の店舗（それぞれ登録順）
+  const all = (await db.select().from(t.stores).orderBy(asc(t.stores.createdAt), asc(t.stores.id)))
+    .sort((a, b) => Number(a.status !== 'active') - Number(b.status !== 'active'))
+  const allStores = user.role === 'owner'
   let storeId: string
-  if (user.role === 'owner') {
+  if (allStores) {
     const wanted = (await cookies()).get(STORE_COOKIE)?.value
     storeId = all.find((s) => s.id === wanted)?.id ?? all.find((s) => s.status === 'active')?.id ?? all[0].id
   } else {
-    if (!user.storeId) redirect('/login')
+    if (!user.storeId || !all.some((s) => s.id === user.storeId)) redirect('/api/session-end')
     storeId = user.storeId
   }
-  const stores = user.role === 'owner' ? all : all.filter((s) => s.id === storeId)
-  return { user, storeId, store: all.find((s) => s.id === storeId)!, stores, isOwner: user.role === 'owner' }
+  const stores = allStores ? all : all.filter((s) => s.id === storeId)
+  return { user, storeId, store: all.find((s) => s.id === storeId)!, stores, isOwner: user.role !== 'staff', allStores }
 })
 
-/** オーナー専用ページ・操作 */
+/** オーナー専用ページ・操作（店舗オーナーは所属店舗のみ） */
 export async function requireOwner(): Promise<Ctx> {
   const ctx = await requireCtx()
   if (!ctx.isOwner) redirect('/dashboard?denied=1')
@@ -66,12 +74,12 @@ export async function requireOwner(): Promise<Ctx> {
 
 /**
  * 権限制御（RLS）を有効にしたトランザクションでクエリを実行する。
- * スタッフはデータベース側でも所属店舗の行しか読み書きできない。
+ * 店舗オーナー・スタッフはデータベース側でも所属店舗の行しか読み書きできない。
  */
 export async function query<T>(fn: (tx: Tx, ctx: Ctx) => Promise<T>, ctxIn?: Ctx): Promise<T> {
   const ctx = ctxIn ?? (await requireCtx())
   return withRls(
-    { role: ctx.user.role, storeId: ctx.isOwner ? ctx.storeId : ctx.user.storeId, userId: ctx.user.id },
+    { role: ctx.user.role, storeId: ctx.allStores ? ctx.storeId : ctx.user.storeId, userId: ctx.user.id },
     (tx) => fn(tx, ctx),
   )
 }

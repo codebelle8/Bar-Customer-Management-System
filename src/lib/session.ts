@@ -1,5 +1,6 @@
 // セッション（HttpOnly Cookie に署名付きトークンを保存）。proxy からも使うため server-only は付けない
 import { SignJWT, jwtVerify } from 'jose'
+import { isRole, type Role } from './roles'
 
 export const SESSION_COOKIE = 'hs_session'
 export const STORE_COOKIE = 'hs_store'
@@ -7,8 +8,8 @@ export const SESSION_HOURS = 14 // 営業1回分（昼〜深夜）を想定
 
 export interface SessionPayload {
   uid: string
-  role: 'owner' | 'staff'
-  sid: string | null // スタッフの所属店舗
+  role: Role
+  sid: string | null // 店舗オーナー・スタッフの所属店舗
   /** パスワードの指紋（パスワード変更・再発行で既存のセッションを無効にする） */
   pwv?: string
 }
@@ -34,7 +35,7 @@ export async function verifySession(token: string | undefined): Promise<SessionP
   if (!token) return null
   try {
     const { payload } = await jwtVerify(token, key(), { algorithms: ['HS256'] })
-    return { uid: String(payload.uid), role: payload.role === 'owner' ? 'owner' : 'staff', sid: (payload.sid as string | null) ?? null, pwv: typeof payload.pwv === 'string' ? payload.pwv : undefined }
+    return { uid: String(payload.uid), role: isRole(payload.role) ? payload.role : 'staff', sid: (payload.sid as string | null) ?? null, pwv: typeof payload.pwv === 'string' ? payload.pwv : undefined }
   } catch {
     return null
   }

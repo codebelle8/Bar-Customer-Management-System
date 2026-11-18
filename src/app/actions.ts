@@ -37,10 +37,10 @@ export async function logout() {
   redirect('/login')
 }
 
-/** 表示する店舗の切り替え（オーナーのみ） */
+/** 表示する店舗の切り替え（全店舗のオーナーのみ） */
 export async function selectStore(formData: FormData) {
   const ctx = await requireCtx()
-  if (!ctx.isOwner) return
+  if (!ctx.allStores) return
   const id = String(formData.get('storeId') ?? '')
   if (!ctx.stores.some((s) => s.id === id)) return
   ;(await cookies()).set(STORE_COOKIE, id, { ...cookieBase, maxAge: 60 * 60 * 24 * 365 })

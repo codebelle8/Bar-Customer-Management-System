@@ -67,7 +67,7 @@ export function getDb(): Promise<DB> {
 }
 
 export interface RlsContext {
-  role: 'owner' | 'staff'
+  role: schema.Role
   storeId: string | null
   userId: string
 }
