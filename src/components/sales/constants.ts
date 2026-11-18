@@ -34,15 +34,16 @@ export const normalizeAmount = (s: unknown) =>
 export const dotMonth = (ym: string) => `${ym.slice(0, 4)}.${ym.slice(5, 7)}`
 
 /**
- * 総括の調整（stats.ts の summaryOf と同じ考え方）
- *   経費合計＝口座移動以外の調整（龍経費＋46経費＋任意の項目）
- *   差引現金残＝現金残 − 経費合計 − 口座移動
- *   差引現金合計＝計算方法は確認中（現在は差引現金残と同額）
+ * 総括の調整（店舗の Excel「総括」シートと同じ計算式）
+ *   現金残（▲イベ経費）＝総売上 − 経費 − アルバイト（stats.ts の summaryOf）  … Excel F14 = F11 − D11 − E11
+ *   差引現金残＝現金残 − 口座移動                                            … Excel F16 = F14 − E16
+ *   経費合計＝口座移動以外の調整（龍経費＋46経費＋任意の項目）                  … Excel D20 = D16 + D18
+ *   差引現金合計＝差引現金残 − 経費合計                                        … Excel F19 = F16 − D20
  */
 export function adjustmentTotals(cashLeft: number, adjs: { label: string; amount: number }[]) {
   const expenseItems = adjs.filter((a) => a.label !== ACCOUNT_MOVE)
   const expenseSum = expenseItems.reduce((a, b) => a + b.amount, 0)
   const move = adjs.filter((a) => a.label === ACCOUNT_MOVE).reduce((a, b) => a + b.amount, 0)
-  const net = cashLeft - expenseSum - move
-  return { expenseItems, expenseSum, move, net, netTotal: net }
+  const net = cashLeft - move
+  return { expenseItems, expenseSum, move, net, netTotal: net - expenseSum }
 }

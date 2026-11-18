@@ -63,7 +63,7 @@ export function AdjustmentsForm({ month, cashLeft, rows }: { month: string; cash
 
       <div>
         <div className="mb-2 flex items-center justify-between gap-2">
-          <p className="text-[12px] font-bold text-sub">経費（現金残から差し引く）</p>
+          <p className="text-[12px] font-bold text-sub">経費（差引現金残から差し引く）</p>
           <button type="button" onClick={add} className="inline-flex h-9 items-center gap-1 rounded-lg border border-dashed border-brand/50 px-3 text-[12px] font-bold text-brand transition hover:bg-brand-soft">
             <Plus className="size-4" />項目を追加
           </button>
@@ -80,8 +80,8 @@ export function AdjustmentsForm({ month, cashLeft, rows }: { month: string; cash
         <p className="mb-2 text-[12px] font-bold text-sub">口座移動・差引</p>
         <div className="grid gap-3 sm:grid-cols-3">
           {move && <AmountCell item={move} onChange={(p) => update(move.key, p)} />}
-          <Result label="差引現金残" value={totals.net} note="現金残 − 経費合計 − 口座移動" strong />
-          <Result label="差引現金合計" value={totals.netTotal} note="計算方法は確認中（差引現金残と同額）" />
+          <Result label="差引現金残" value={totals.net} note="現金残 − 口座移動" />
+          <Result label="差引現金合計" value={totals.netTotal} note="差引現金残 − 経費合計" strong />
         </div>
       </div>
 
@@ -92,7 +92,7 @@ export function AdjustmentsForm({ month, cashLeft, rows }: { month: string; cash
         {dirty && !pending && <span className="text-[12px] font-medium text-[#b7791f]">未保存の変更があります</span>}
         {state.error && <p role="alert" className="rounded-lg bg-[#fde7eb] px-3 py-2 text-[13px] text-up">{state.error}</p>}
         {state.ok && !dirty && <p role="status" className="rounded-lg bg-[#e3f6ea] px-3 py-2 text-[13px] text-ok">保存しました</p>}
-        <span className="ml-auto text-[11px] text-mute">龍経費・46経費・口座移動の意味は確認中です</span>
+        <span className="ml-auto text-[11px] text-mute">計算式は店舗のExcel（総括シート）と同じです</span>
       </div>
     </form>
   )

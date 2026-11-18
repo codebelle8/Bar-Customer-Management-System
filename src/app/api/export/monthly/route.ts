@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
 
 /** 総括シート：A〜F 列に総括、H 列から日別表 */
 function summarySheet(month: string, storeName: string, rows: DailyRow[], adjustments: { label: string; amount: number }[]) {
-  const sum = summaryOf(rows, adjustments)
+  const sum = summaryOf(rows)
   const s = sum.total
   const adj = adjustmentTotals(sum.cashLeft, adjustments)
   const aoa: Row[] = []
@@ -150,8 +150,8 @@ function summarySheet(month: string, storeName: string, rows: DailyRow[], adjust
     r += 2
   }
   r += 1
-  put(r, 0, '※昼・夜の現金売上の計算方法は確認中（総売上と同じ金額を表示）')
-  put(r + 1, 0, '※龍経費・46経費・口座移動・差引現金合計の扱いは確認中')
+  put(r, 0, '※差引現金残＝現金残−口座移動、差引現金合計＝差引現金残−経費合計（店舗の総括シートと同じ計算）')
+  put(r + 1, 0, '※昼・夜の現金売上の計算方法は確認中（総売上と同じ金額を表示）')
 
   // ---- 日別表（H 列〜） ----
   put(0, H, `${fmtJaMonth(month)} 日報`)

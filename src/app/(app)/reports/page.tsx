@@ -66,7 +66,7 @@ async function SummaryTab({ month, today }: { month: string; today: string }) {
   const ctx = await requireOwner()
   const { from, to } = monthRange(month, today)
   const data = await query(async (tx) => ({ rows: await dailyRows(tx, ctx.storeId, from, to), adjustments: await loadAdjustments(tx, ctx.storeId, month) }), ctx)
-  const sum = summaryOf(data.rows, data.adjustments)
+  const sum = summaryOf(data.rows)
   const s = sum.total
   const lines = [
     { label: '昼の部', ...sum.day, expense: null, parttime: null },
@@ -132,7 +132,7 @@ async function SummaryTab({ month, today }: { month: string; today: string }) {
           </div>
           {s.tax > 0 && <p className="mt-2 text-[11px] text-sub">税金 {yen(s.tax)} は現金残の計算に含めていません（Excel と同じ）</p>}
         </Card>
-        <Card title="調整・差引現金残">
+        <Card title="調整・差引現金合計">
           <AdjustmentsForm month={month} cashLeft={sum.cashLeft} rows={data.adjustments} />
         </Card>
       </div>

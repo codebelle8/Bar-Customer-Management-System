@@ -167,21 +167,15 @@ export function sumRows(rows: DailyRow[], label = '合計'): DailyRow {
 /**
  * 総括（Excel の左側の表と同じ）
  *   現金残（▲イベ経費）＝総売上 − 経費 − アルバイト
- *   差引現金残＝現金残 − 龍経費・46経費などの経費合計 − 口座移動
+ *   差引現金残・差引現金合計は、月次の調整（龍経費・46経費・口座移動）を使って adjustmentTotals で計算する
  */
-export function summaryOf(rows: DailyRow[], adjustments: { label: string; amount: number }[] = []) {
+export function summaryOf(rows: DailyRow[]) {
   const s = sumRows(rows)
-  const cashLeft = s.total - s.expense - s.parttime
-  const move = adjustments.filter((a) => a.label === '口座移動').reduce((a, b) => a + b.amount, 0)
-  const otherExpense = adjustments.filter((a) => a.label !== '口座移動').reduce((a, b) => a + b.amount, 0)
   return {
     total: s,
     day: { male: s.maleDay, female: s.femaleDay, cp: s.cpDay, cash: s.salesDay, sales: s.salesDay },
     night: { male: s.maleNight, female: s.femaleNight, cp: s.cpNight, cash: s.salesNight, sales: s.salesNight },
-    cashLeft,
-    otherExpense,
-    accountMove: move,
-    netCash: cashLeft - otherExpense - move,
+    cashLeft: s.total - s.expense - s.parttime,
   }
 }
 
