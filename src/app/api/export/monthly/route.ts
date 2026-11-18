@@ -195,7 +195,7 @@ const STATUS: Record<t.Visit['status'], string> = { in: '入店中', out: '精�
 
 /** 来店明細シート：1 来店 1 行 */
 function visitSheet(visits: { v: t.Visit; memberNo: string; handle: string; partnerNo: string | null; partnerHandle: string | null; extra: number }[]) {
-  const head = ['日付', '入店', '退店', '会員番号', 'ハンドルネーム', '区分', '部', '料金区分', '入場料', '割引', '入会金', '年会費', '追加', '合計', '状態']
+  const head = ['日付', '入店', '退店', '会員番号', 'ハンドルネーム', '区分', '部', '料金区分', '入場料', '割引', 'うちU30割引', '割引の内容', '入会金', '年会費', '追加', '合計', '状態']
   const body: Row[] = visits.map(({ v, ...m }) => [
     numCell(serial(v.businessDate), 'yyyy/m/d'),
     timeCell(v.checkedInAt),
@@ -207,6 +207,8 @@ function visitSheet(visits: { v: t.Visit; memberNo: string; handle: string; part
     v.dayType,
     yenCell(v.entranceFee),
     yenCell(v.discount),
+    yenCell(v.u30Discount),
+    v.discountReason || null,
     yenCell(v.joinFee),
     yenCell(v.annualFee),
     yenCell(m.extra),
@@ -214,7 +216,7 @@ function visitSheet(visits: { v: t.Visit; memberNo: string; handle: string; part
     STATUS[v.status],
   ])
   const ws = XLSX.utils.aoa_to_sheet([head, ...body])
-  ws['!cols'] = [11, 7, 7, 10, 30, 8, 5, 9, 9, 8, 8, 8, 9, 10, 8].map((wch) => ({ wch }))
+  ws['!cols'] = [11, 7, 7, 10, 30, 8, 5, 9, 9, 8, 10, 34, 8, 8, 9, 10, 8].map((wch) => ({ wch }))
   ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(body.length, 1), c: head.length - 1 } }) }
   return ws
 }

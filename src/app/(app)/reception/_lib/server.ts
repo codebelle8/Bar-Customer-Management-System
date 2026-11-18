@@ -9,6 +9,7 @@ import { loadPricing } from '@/lib/dal'
 import { addDays, addMonths, ageOn, jstParts } from '@/lib/format'
 import { businessDateOf, CATEGORIES, DAY_PARTS, dayInfo, dayPartOf, discountFor, priceOf } from '@/lib/pricing'
 import { visitCounts } from '@/lib/stats'
+import { isU30, u30DiscountFor } from '@/lib/u30'
 import type { InStoreRow, MemberCard } from './types'
 
 /** 画面に表示してよい入力エラー */
@@ -105,8 +106,10 @@ export async function searchMembers(tx: Tx, storeId: string, rawQ: string, limit
 }
 
 /** 会員の行に、来店回数・最終来店・入店中などを付けて画面用のカードにする */
+type CardSettings = Pick<StoreSettings, 'annualFeeEnabled' | 'u30Enabled' | 'u30MaxAge' | 'u30Gender'>
+
 export async function memberCards(
-  tx: Tx, storeId: string, today: string, settings: Pick<StoreSettings, 'annualFeeEnabled'>, ms: t.Member[],
+  tx: Tx, storeId: string, today: string, settings: CardSettings, ms: t.Member[],
 ): Promise<MemberCard[]> {
   if (!ms.length) return []
   const ids = ms.map((m) => m.id)
@@ -127,9 +130,10 @@ export async function memberCards(
     }
   return ms.map((m) => {
     const inStore = inside.has(m.id)
+    const age = m.birthday ? ageOn(m.birthday, today) : null
     return {
       id: m.id, memberNo: m.memberNo, handle: m.handleName, gender: m.gender,
-      age: m.birthday ? ageOn(m.birthday, today) : null, joinedAt: m.joinedAt,
+      age, u30: isU30(settings, m.gender, age), joinedAt: m.joinedAt,
       thisMonth: thisMonth.get(m.id) ?? 0, lastMonth: lastMonth.get(m.id) ?? 0, lastVisit: last.get(m.id) ?? null,
       memo: m.memo, status: m.status, banReason: m.banReason, inStore, feeExpiresAt: m.feeExpiresAt,
       feeDue: settings.annualFeeEnabled && (!m.feeExpiresAt || m.feeExpiresAt < today),
@@ -139,7 +143,7 @@ export async function memberCards(
   })
 }
 
-export async function memberCardById(tx: Tx, storeId: string, today: string, settings: Pick<StoreSettings, 'annualFeeEnabled'>, id: string) {
+export async function memberCardById(tx: Tx, storeId: string, today: string, settings: CardSettings, id: string) {
   if (!isUuid(id)) return null
   const [m] = await tx.select().from(t.members).where(and(eq(t.members.id, id), eq(t.members.storeId, storeId)))
   if (!m) return null
@@ -176,7 +180,7 @@ export async function isNewToday(tx: Tx, storeId: string, m: t.Member, today: st
   return n === 0
 }
 
-/** リピーター割引の判定に使う回数：前月の来店回数・今月すでに割引を使った回数 */
+/** リピーター割引の判定に使う回数：前月の来店回数・今月すでにリピーター割引を使った回数（U30割引のみの来店は数えない） */
 export async function discountCounts(tx: Tx, storeId: string, memberId: string, today: string) {
   const [pf, pt] = prevMonthRange(today)
   const prevMonthVisits = (await visitCounts(tx, storeId, pf, pt, [memberId])).get(memberId) ?? 0
@@ -184,7 +188,7 @@ export async function discountCounts(tx: Tx, storeId: string, memberId: string, 
     .select({ n: count() })
     .from(t.visits)
     .where(and(
-      eq(t.visits.storeId, storeId), eq(t.visits.memberId, memberId), ne(t.visits.status, 'void'), gt(t.visits.discount, 0),
+      eq(t.visits.storeId, storeId), eq(t.visits.memberId, memberId), ne(t.visits.status, 'void'), gt(t.visits.discount, t.visits.u30Discount),
       gte(t.visits.businessDate, monthStart(today)), lte(t.visits.businessDate, today),
     ))
   return { prevMonthVisits, usedThisMonth: n }
@@ -195,6 +199,16 @@ export function discountByCategory(today: Today, gender: '男性' | '女性', co
   return Object.fromEntries(
     CATEGORIES.map((c) => {
       const d = discountFor({ settings: today.settings, category: c, gender, ...counts, fee: today.prices[c] })
+      return [c, { eligible: d.amount > 0, reason: d.reason }]
+    }),
+  ) as Record<Category, { eligible: boolean; reason: string }>
+}
+
+/** 区分ごとの U30割引の可否（画面表示用。金額はサーバーで再計算する） */
+export function u30ByCategory(today: Today, gender: '男性' | '女性', age: number | null) {
+  return Object.fromEntries(
+    CATEGORIES.map((c) => {
+      const d = u30DiscountFor({ rule: today.settings, category: c, gender, age, fee: today.prices[c] })
       return [c, { eligible: d.amount > 0, reason: d.reason }]
     }),
   ) as Record<Category, { eligible: boolean; reason: string }>

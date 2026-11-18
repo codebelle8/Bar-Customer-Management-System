@@ -4,7 +4,7 @@ import { StickyNote } from 'lucide-react'
 import { Badge, cx } from '@/components/ui'
 import { fmtDate } from '@/lib/format'
 import type { MemberCard } from '../_lib/types'
-import { BlockBanner, GenderBadge } from './bits'
+import { BlockBanner, GenderBadge, U30Badge } from './bits'
 
 export function MemberCardView({ m, action, compact, selected }: { m: MemberCard; action?: ReactNode; compact?: boolean; selected?: boolean }) {
   const blocked = m.block === 'banned' || m.block === 'withdrawn'
@@ -28,7 +28,7 @@ export function MemberCardView({ m, action, compact, selected }: { m: MemberCard
         {m.newToday && <Badge tone="purple">本日登録</Badge>}
       </div>
       <dl className={cx('mt-2 grid gap-x-4 gap-y-1 text-[13px]', compact ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3')}>
-        <Item label="年齢">{m.age != null ? `${m.age}歳` : '—'}</Item>
+        <Item label="年齢">{m.age != null ? <>{m.age}歳{m.u30 && <U30Badge className="ml-1.5" />}</> : '—'}</Item>
         <Item label="入会日">{fmtDate(m.joinedAt)}</Item>
         <Item label="最終来店">{m.lastVisit ? fmtDate(m.lastVisit) : 'なし'}</Item>
         <Item label="今月">

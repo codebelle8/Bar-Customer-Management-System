@@ -10,6 +10,7 @@ import { audit, query, requireCtx } from '@/lib/dal'
 import { ageOn, yen } from '@/lib/format'
 import { discountFor } from '@/lib/pricing'
 import { PHOTO_ID_DOCS, REFERRALS, SUB_ID_DOCS } from '@/lib/terms'
+import { u30DiscountFor } from '@/lib/u30'
 import { addYear, buildQuote } from './_lib/quote'
 import {
   assertCanEnter, discountCounts, isNewToday, loadToday, memberCards, memberLabel, nextFreeMemberNo, normalizeQuery, PART_LABEL,
@@ -39,6 +40,12 @@ function parsePayload<T>(schema: z.ZodType<T>, fd: FormData): T {
   const r = schema.safeParse(raw)
   if (!r.success) throw new UserError(r.error.issues[0]?.message ?? '入力内容に誤りがあります。')
   return r.data
+}
+
+/** 操作ログ用の割引の内訳 */
+const discountNote = (q: { u30Discount: number; repeatDiscount: number }) => {
+  const parts = [q.u30Discount && `U30割引 −${yen(q.u30Discount)}`, q.repeatDiscount && `リピーター割引 −${yen(q.repeatDiscount)}`].filter(Boolean)
+  return parts.length ? `（${parts.join('・')}）` : ''
 }
 
 function revalidateAll() {
@@ -135,10 +142,14 @@ export async function registerMemberAction(_prev: State, fd: FormData): Promise<
           partnerNew = await isNewToday(tx, ctx.storeId, partner, today.businessDate)
         }
         const partnerAnnual = partnerNew && s.annualFeeEnabled && (!partner?.feeExpiresAt || partner.feeExpiresAt < today.businessDate)
+        // 新規入会でも U30割引は適用する（リピーター割引は来店歴がないため対象外）
+        const u = u30DiscountFor({ rule: s, category: input.category, gender: input.gender, age, fee: today.prices[input.category] })
         quote = buildQuote({
           category: input.category,
           partLabel: PART_LABEL[today.part],
           base: today.prices[input.category],
+          u30: { eligible: u.amount > 0, cap: s.u30Amount, reason: u.reason },
+          combine: s.u30Combine,
           joinFee: s.joinFee * (partnerNew ? 2 : 1),
           annualFee: s.annualFeeEnabled ? s.annualFee * (partnerAnnual ? 2 : 1) : 0,
         })
@@ -161,12 +172,13 @@ export async function registerMemberAction(_prev: State, fd: FormData): Promise<
         await tx.insert(t.visits).values({
           storeId: ctx.storeId, memberId: m.id, partnerMemberId: partner?.id ?? null, businessDate: today.businessDate,
           dayPart: today.part, dayType: today.day.type, category: input.category, isNew: true,
-          entranceFee: quote.fee, discount: 0, discountReason: '', joinFee: quote.joinFee, annualFee: quote.annualFee,
+          entranceFee: quote.fee, discount: quote.discount, u30Discount: quote.u30Discount, discountReason: quote.discountReason,
+          joinFee: quote.joinFee, annualFee: quote.annualFee,
           entryTotal: quote.total, status: 'in', checkedInAt: now, staffId: ctx.user.id,
           note: partnerNew && partner ? `パートナー ${partner.memberNo} も本日入会（入会金を合算）` : '',
         })
         await audit(tx, ctx, '新規入会・来店受付',
-          `${memberLabel(memberNo, input.handle, partner?.memberNo, partner?.handleName)} ${input.category} ${yen(quote.total)}`)
+          `${memberLabel(memberNo, input.handle, partner?.memberNo, partner?.handleName)} ${input.category} ${yen(quote.total)}${discountNote(quote)}`)
       } else {
         await audit(tx, ctx, '新規入会（登録のみ）', `${memberNo} ${input.handle}`)
       }
@@ -221,9 +233,12 @@ export async function checkinAction(_prev: State, fd: FormData): Promise<ActionS
       const fee = input.override?.fee ?? base
       const counts = await discountCounts(tx, ctx.storeId, main.id, today.businessDate)
       const d = discountFor({ settings: s, category: input.category, gender: main.gender, ...counts, fee })
+      const age = main.birthday ? ageOn(main.birthday, today.businessDate) : null
+      const u = u30DiscountFor({ rule: s, category: input.category, gender: main.gender, age, fee })
       const quote = buildQuote({
         category: input.category, partLabel: PART_LABEL[today.part], base, override: input.override?.fee ?? null,
         discount: { eligible: d.amount > 0, cap: s.discountAmount, reason: d.reason },
+        u30: { eligible: u.amount > 0, cap: s.u30Amount, reason: u.reason }, combine: s.u30Combine,
         joinFee: s.joinFee * joinPeople.length, annualFee: s.annualFee * annualPeople.length,
       })
       if (input.paid != null && input.paid < quote.total) throw new UserError(`預かり金が不足しています（合計 ${yen(quote.total)}）。`)
@@ -234,7 +249,7 @@ export async function checkinAction(_prev: State, fd: FormData): Promise<ActionS
         .values({
           storeId: ctx.storeId, memberId: main.id, partnerMemberId: partner?.id ?? null, businessDate: today.businessDate,
           dayPart: today.part, dayType: today.day.type, category: input.category, isNew: joinPeople.length > 0,
-          entranceFee: quote.fee, discount: quote.discount, discountReason: quote.discountReason,
+          entranceFee: quote.fee, discount: quote.discount, u30Discount: quote.u30Discount, discountReason: quote.discountReason,
           joinFee: quote.joinFee, annualFee: quote.annualFee, entryTotal: quote.total, status: 'in', checkedInAt: now,
           staffId: ctx.user.id, note: adjust,
         })
@@ -244,7 +259,7 @@ export async function checkinAction(_prev: State, fd: FormData): Promise<ActionS
         await tx.update(t.members).set({ feeExpiresAt: addYear(from), updatedAt: now }).where(eq(t.members.id, p.id))
       }
       const label = memberLabel(main.memberNo, main.handleName, partner?.memberNo, partner?.handleName)
-      await audit(tx, ctx, '来店受付', `${label} ${input.category} ${yen(quote.total)}${quote.discount ? `（割引 −${yen(quote.discount)}）` : ''}`)
+      await audit(tx, ctx, '来店受付', `${label} ${input.category} ${yen(quote.total)}${discountNote(quote)}`)
       if (input.override) await audit(tx, ctx, '料金調整（来店受付）', `${label} ${adjust}`)
       return `/reception/checkin?done=${v.id}${input.paid != null ? `&paid=${input.paid}` : ''}`
     }, ctx)

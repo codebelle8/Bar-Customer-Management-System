@@ -8,10 +8,10 @@ import * as t from '@/db/schema'
 import { query, requireCtx } from '@/lib/dal'
 import { fmtJaDate, fmtTime } from '@/lib/format'
 import { DAY_TYPE_STYLE } from '@/lib/pricing'
-import { MoneyRow, Notice } from '../_components/bits'
+import { DiscountRows, MoneyRow, Notice } from '../_components/bits'
 import { MemberCardView } from '../_components/MemberCardView'
 import {
-  discountByCategory, discountCounts, isUuid, loadToday, memberCardById, memberCards, normalizeQuery, PART_LABEL, searchMembers,
+  discountByCategory, discountCounts, isUuid, loadToday, memberCardById, memberCards, normalizeQuery, PART_LABEL, searchMembers, u30ByCategory,
 } from '../_lib/server'
 import { CheckinPanel } from './CheckinPanel'
 
@@ -72,6 +72,8 @@ export default async function CheckinPage({ searchParams }: PageProps<'/receptio
                 partLabel: PART_LABEL[today.part], dayTypeLabel: today.day.label || DAY_TYPE_STYLE[today.day.type].label,
               }}
               discount={discountByCategory(today, selected.gender, counts!)}
+              u30={u30ByCategory(today, selected.gender, selected.age)}
+              u30Rule={{ enabled: s.u30Enabled, maxAge: s.u30MaxAge, amount: s.u30Amount, gender: s.u30Gender, combine: s.u30Combine }}
               counts={counts!}
               rule={{ enabled: s.discountEnabled, minVisits: s.discountMinVisits, amount: s.discountAmount, gender: s.discountGender, scope: s.discountScope }}
               joinFee={s.joinFee}
@@ -149,7 +151,7 @@ async function Done({ id, paid }: { id: string; paid: number | null }) {
           <p className="mb-1 text-[12px] text-sub">{fmtJaDate(v.businessDate)}・{v.dayType}・{PART_LABEL[v.dayPart]}・{fmtTime(v.checkedInAt)} 入店・{v.category}</p>
           <div className="divide-y divide-line">
             <MoneyRow label={`入場料（${v.category}）`} amount={v.entranceFee} note={v.note || undefined} />
-            {v.discount > 0 && <MoneyRow label="リピーター割引" amount={-v.discount} note={v.discountReason} />}
+            <DiscountRows discount={v.discount} u30Discount={v.u30Discount} reason={v.discountReason} />
             {v.joinFee > 0 && <MoneyRow label="入会金" amount={v.joinFee} />}
             {v.annualFee > 0 && <MoneyRow label="年会費" amount={v.annualFee} />}
             <div className="flex items-end justify-between py-3">

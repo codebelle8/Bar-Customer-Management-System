@@ -320,7 +320,7 @@ async function VisitsTab({ today, date }: { today: string; date: string }) {
                   <Td>{v.dayPart}</Td>
                   <Td>{v.dayType}</Td>
                   <Td className="text-right">{yen(v.entranceFee)}</Td>
-                  <Td className="text-right">{v.discount ? <span className="text-up">−{yen(v.discount)}</span> : '—'}</Td>
+                  <Td className="text-right">{v.discount ? <span className="text-up" title={v.discountReason}>−{yen(v.discount)}</span> : '—'}</Td>
                   <Td className="text-right">{v.joinFee + v.annualFee ? yen(v.joinFee + v.annualFee) : '—'}</Td>
                   <Td className="text-right">{r.extra ? yen(r.extra) : '—'}</Td>
                   <Td className="text-right font-bold">{yen(v.entryTotal + r.extra)}</Td>

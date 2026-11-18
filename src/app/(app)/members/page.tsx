@@ -10,6 +10,8 @@ import { Badge, Card, Empty, Td, Th, buttonCls, cx, inputCls } from '@/component
 import * as t from '@/db/schema'
 import { query, requireCtx } from '@/lib/dal'
 import { addDays, ageOn, diffDays, fmtDate, num } from '@/lib/format'
+import { isU30 } from '@/lib/u30'
+import { U30Badge } from '@/components/members/U30Badge'
 import { businessDateOf } from '@/lib/pricing'
 import { memberVisitAgg } from './_lib/agg'
 
@@ -94,7 +96,7 @@ export default async function MembersPage({ searchParams }: PageProps<'/members'
       .limit(PAGE_SIZE)
       .offset((page - 1) * PAGE_SIZE)
 
-    return { today, feeOn, feeDue, feeLimit, summary, total, pages, page, rows }
+    return { today, feeOn, feeDue, feeLimit, summary, total, pages, page, rows, settings }
   }, ctx)
 
   const { today, feeOn, feeDue, feeLimit, summary, total, pages, page, rows } = data
@@ -191,7 +193,9 @@ export default async function MembersPage({ searchParams }: PageProps<'/members'
                       <Td><Link href={`/members/${m.id}`} className="font-bold hover:text-brand">{m.memberNo}</Link></Td>
                       <Td className="max-w-48 truncate"><Link href={`/members/${m.id}`} className="font-medium hover:text-brand">{m.handleName}</Link></Td>
                       <Td><span className={m.gender === '男性' ? 'text-info' : 'text-[#c8457e]'}>{m.gender}</span></Td>
-                      <Td className="text-right">{m.birthday ? `${ageOn(m.birthday, today)}歳` : <span className="text-mute">—</span>}</Td>
+                      <Td className="text-right whitespace-nowrap">
+                        {m.birthday ? <>{isU30(data.settings, m.gender, ageOn(m.birthday, today)) && <U30Badge className="mr-1.5" />}{ageOn(m.birthday, today)}歳</> : <span className="text-mute">—</span>}
+                      </Td>
                       <Td className="hidden xl:table-cell">{fmtDate(m.joinedAt)}</Td>
                       <Td className="text-right">
                         <b className="text-[14px]">{num(m.total)}</b><span className="text-sub">回</span>

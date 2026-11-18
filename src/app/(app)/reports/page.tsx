@@ -10,6 +10,7 @@ import { MonthNav } from '@/components/sales/MonthNav'
 import { isYm } from '@/components/sales/constants'
 import * as t from '@/db/schema'
 import { query, requireOwner } from '@/lib/dal'
+import { discountParts } from '@/lib/u30'
 import { addMonths, fmtJaMonth, fmtMD, num, pct, yen } from '@/lib/format'
 import { DAY_TYPE_STYLE, DAY_TYPES } from '@/lib/pricing'
 import { dailyRows, sumRows, summaryOf } from '@/lib/stats'
@@ -328,6 +329,7 @@ async function TypesTab({ month, today }: { month: string; today: string }) {
         fee: sql<number>`coalesce(sum(${t.visits.entranceFee} - ${t.visits.discount}), 0)`.mapWith(Number),
         join: sql<number>`coalesce(sum(${t.visits.joinFee} + ${t.visits.annualFee}), 0)`.mapWith(Number),
         discount: sql<number>`coalesce(sum(${t.visits.discount}), 0)`.mapWith(Number),
+        u30Discount: sql<number>`coalesce(sum(${t.visits.u30Discount}), 0)`.mapWith(Number),
       })
       .from(t.visits)
       .where(where)
@@ -361,6 +363,7 @@ async function TypesTab({ month, today }: { month: string; today: string }) {
   const all = pick(() => true)
   const join = data.groups.reduce((a, g) => a + g.join, 0)
   const discount = data.groups.reduce((a, g) => a + g.discount, 0)
+  const u30Discount = data.groups.reduce((a, g) => a + g.u30Discount, 0)
 
   return (
     <Card title={<>料金区分別の内訳<span className="text-[13px] font-medium text-sub">{fmtJaMonth(month)}</span></>} bodyClass="px-2 pt-2 pb-3">
@@ -424,7 +427,7 @@ async function TypesTab({ month, today }: { month: string; today: string }) {
         <span>＋ 入会金・年会費 <b className="text-ink">{yen(join)}</b></span>
         <span>＋ 延長料金 <b className="text-ink">{yen(data.ext)}</b></span>
         <span>＝ 日報の入場料 <b className={all.fee + join + data.ext === data.entrance ? 'text-ok' : 'text-up'}>{yen(data.entrance)}</b></span>
-        <span className="ml-auto">リピーター割引 −{yen(discount)}</span>
+        <span className="ml-auto">割引 −{yen(discount)}{discount > 0 && `（${discountParts(discount, u30Discount)}）`}</span>
       </div>
       <p className="px-3 pt-2 text-[11px] text-mute">金額は入場料（割引後）。入会金・年会費・延長料金・ドリンクは含みません。件数はカップルを1組＝1件、人数は2名として数えます。取消は除きます。</p>
     </Card>

@@ -1,5 +1,5 @@
 'use client'
-// 既存会員の来店受付：区分・パートナー・割引・年会費・料金調整（オーナー）・お会計
+// 既存会員の来店受付：区分・パートナー・割引（リピーター・U30）・年会費・料金調整（オーナー）・お会計
 import { useActionState, useState } from 'react'
 import { Check, Gift, Loader2, Pencil } from 'lucide-react'
 import { Card, Input, cx } from '@/components/ui'
@@ -19,6 +19,8 @@ export interface CheckinPanelProps {
   discount: Record<Category, { eligible: boolean; reason: string }>
   counts: { prevMonthVisits: number; usedThisMonth: number }
   rule: { enabled: boolean; minVisits: number; amount: number; gender: string; scope: 'every' | 'once' }
+  u30: Record<Category, { eligible: boolean; reason: string }>
+  u30Rule: { enabled: boolean; maxAge: number; amount: number; gender: string; combine: boolean }
   joinFee: number
   annual: { enabled: boolean; fee: number }
   isOwner: boolean
@@ -44,9 +46,11 @@ export function CheckinPanel(p: CheckinPanelProps) {
   const joinIds = [joinMain && m.newToday ? m.id : null, ptn && ptn.newToday && joinPartner ? ptn.id : null].filter((x): x is string => !!x)
   const override = adjust && p.isOwner ? parseYen(adjFee) : null
   const d = p.discount[category]
+  const u = p.u30[category]
   const quote = buildQuote({
     category, partLabel: p.today.partLabel, base: p.today.prices[category], override,
     discount: { eligible: d.eligible, cap: p.rule.amount, reason: d.reason },
+    u30: { eligible: u.eligible, cap: p.u30Rule.amount, reason: u.reason }, combine: p.u30Rule.combine,
     joinFee: p.joinFee * joinIds.length, joinNote: joinIds.length ? '本日登録の新規会員' : undefined,
     annualFee: p.annual.fee * annualIds.length, annualNote: annualIds.length ? `${annualIds.length}名分・期限を1年延長` : undefined,
   })
@@ -55,17 +59,25 @@ export function CheckinPanel(p: CheckinPanelProps) {
   const why = couple && !partner ? 'パートナーの会員を選んでください' : !adjustOk ? '調整後の入場料と理由を入力してください' : !paidOk(paid, quote.total) ? '預かり金が不足しています' : ''
 
   // 割引が付かない理由（対象性別の会員のみ表示）
-  const noDiscount = !d.eligible && p.rule.enabled && m.gender === p.rule.gender
-    ? couple
-      ? 'カップルはリピーター割引の対象外です'
-      : category !== m.gender
+  const repeatTarget = p.rule.enabled && m.gender === p.rule.gender
+  const u30Target = p.u30Rule.enabled && (p.u30Rule.gender === '両方' || p.u30Rule.gender === m.gender)
+  const noDiscount: string[] = []
+  if (couple) {
+    if (repeatTarget || m.u30) noDiscount.push(`カップルは${repeatTarget && m.u30 ? 'リピーター割引・U30割引' : repeatTarget ? 'リピーター割引' : 'U30割引'}の対象外です`)
+  } else {
+    if (repeatTarget && !d.eligible) {
+      const why = category !== m.gender
         ? '区分が会員の性別と異なるため割引は適用されません'
         : p.counts.prevMonthVisits < p.rule.minVisits
           ? `前月の来店 ${p.counts.prevMonthVisits}回（${p.rule.minVisits}回以上で翌月 −¥${p.rule.amount.toLocaleString('ja-JP')}）`
           : p.rule.scope === 'once' && p.counts.usedThisMonth > 0
             ? '今月はすでに割引を利用済みです（月1回まで）'
             : ''
-    : ''
+      if (why) noDiscount.push(`リピーター割引：${why}`)
+    }
+    if (u30Target && m.age == null) noDiscount.push('U30割引：生年月日が未登録のため判定できません（会員詳細で登録できます）')
+  }
+  const applied = quote.lines.filter((l) => l.amount < 0)
 
   const payload = JSON.stringify({
     memberId: m.id, category, partnerId: couple ? (partner?.id ?? null) : null, annualFor: annualIds, joinFor: joinIds,
@@ -89,16 +101,20 @@ export function CheckinPanel(p: CheckinPanelProps) {
           </div>
         )}
 
-        {d.eligible && (
+        {applied.length > 0 && (
           <div className="mt-4 flex items-center gap-3 rounded-xl border border-[#bfe6cf] bg-[#effaf3] px-4 py-3 text-ok" data-testid="discount-applied">
             <Gift className="size-6 shrink-0" />
-            <div>
-              <p className="text-[16px] font-bold">リピーター割引 −¥{Math.min(quote.fee, p.rule.amount).toLocaleString('ja-JP')} を自動適用</p>
-              <p className="text-[13px]">{d.reason}</p>
+            <div className="space-y-1.5">
+              {applied.map((l) => (
+                <div key={l.label}>
+                  <p className="text-[16px] font-bold">{l.label} −¥{(-l.amount).toLocaleString('ja-JP')} を自動適用</p>
+                  {l.note && <p className="text-[13px]">{l.note}</p>}
+                </div>
+              ))}
             </div>
           </div>
         )}
-        {noDiscount && <p className="mt-3 text-[13px] text-sub">割引：{noDiscount}</p>}
+        {noDiscount.map((x) => <p key={x} className="mt-3 text-[13px] text-sub">{x}</p>)}
 
         {p.annual.enabled && m.feeDue && (
           <div className="mt-4 space-y-2">
