@@ -22,6 +22,7 @@ const TH = 'px-3 py-2.5 text-[12px] font-medium whitespace-nowrap text-sub'
 const TABS = [
   { key: 'summary', label: '総括' },
   { key: 'trend', label: '月別推移' },
+  { key: 'members', label: '会員別売上' },
   { key: 'types', label: '料金区分別' },
 ] as const
 type Tab = (typeof TABS)[number]['key']
@@ -53,6 +54,7 @@ export default async function ReportsPage({ searchParams }: PageProps<'/reports'
       </div>
       {tab === 'summary' && <SummaryTab month={month} today={today} />}
       {tab === 'trend' && <TrendTab month={month} today={today} hrefFor={(m) => href('summary', m)} />}
+      {tab === 'members' && <MembersTab month={month} today={today} />}
       {tab === 'types' && <TypesTab month={month} today={today} />}
     </div>
   )
@@ -213,6 +215,100 @@ async function TrendTab({ month, today, hrefFor }: { month: string; today: strin
         <p className="px-3 pt-2 text-[11px] text-mute">集計中の月は本日の営業日までの集計です。前月比は総売上の比較で、集計中の月は前月の同じ日までと比べています（同期比）。</p>
       </Card>
     </>
+  )
+}
+
+/* ------------------------------ 会員別売上 ------------------------------ */
+
+async function MembersTab({ month, today }: { month: string; today: string }) {
+  const ctx = await requireOwner()
+  const { from, to } = monthRange(month, today)
+  const data = await query(async (tx) => {
+    const visits = await tx
+      .select({
+        memberId: t.visits.memberId,
+        partnerId: t.visits.partnerMemberId,
+        entry: t.visits.entryTotal,
+        // 結合なしの select では列名が修飾されないため、外側の visits.id を明示する
+        extra: sql<number>`(select coalesce(sum(vi.amount), 0) from visit_items vi where vi.visit_id = "visits"."id")`.mapWith(Number),
+      })
+      .from(t.visits)
+      .where(and(eq(t.visits.storeId, ctx.storeId), between(t.visits.businessDate, from, to), ne(t.visits.status, 'void')))
+    const members = await tx
+      .select({ id: t.members.id, no: t.members.memberNo, handle: t.members.handleName, gender: t.members.gender, status: t.members.status })
+      .from(t.members)
+      .where(eq(t.members.storeId, ctx.storeId))
+    return { visits, members }
+  }, ctx)
+
+  const info = new Map(data.members.map((m) => [m.id, m]))
+  type Agg = { id: string; entry: number; extra: number; visits: number; cp: number; partners: Map<string, number>; asPartner: number; mains: Set<string> }
+  const agg = new Map<string, Agg>()
+  const get = (id: string) => {
+    let a = agg.get(id)
+    if (!a) agg.set(id, (a = { id, entry: 0, extra: 0, visits: 0, cp: 0, partners: new Map(), asPartner: 0, mains: new Set() }))
+    return a
+  }
+  for (const v of data.visits) {
+    const a = get(v.memberId)
+    a.entry += v.entry
+    a.extra += v.extra
+    a.visits++
+    if (v.partnerId) {
+      a.cp++
+      a.partners.set(v.partnerId, (a.partners.get(v.partnerId) ?? 0) + 1)
+      const p = get(v.partnerId)
+      p.visits++
+      p.asPartner++
+      p.mains.add(v.memberId)
+    }
+  }
+  const ranked = [...agg.values()].filter((a) => a.entry + a.extra > 0).sort((a, b) => b.entry + b.extra - (a.entry + a.extra) || b.visits - a.visits).slice(0, 30)
+  const total = data.visits.reduce((s, v) => s + v.entry + v.extra, 0)
+  const name = (id: string) => info.get(id)?.handle ?? '（不明）'
+
+  return (
+    <Card title={<>会員別売上ランキング<span className="text-[13px] font-medium text-sub">{fmtJaMonth(month)}・上位30名</span></>}
+      action={<span className="text-[12px] text-sub">月の売上合計 <b className="text-ink tabular-nums">{yen(total)}</b>・来店した会員 {agg.size}名</span>} bodyClass="px-2 pt-2 pb-3">
+      {ranked.length ? (
+        <div className="overflow-x-auto">
+          <table className="w-full text-[13px] tabular-nums">
+            <thead className="bg-[#f8f6fc]">
+              <tr><Th className="text-center">順位</Th><Th>会員番号</Th><Th>ハンドルネーム</Th><Th>性別</Th><Th className="text-right">来店回数</Th><Th className="text-right">入場料等</Th><Th className="text-right">ドリンク等</Th><Th className="text-right">合計</Th><Th className="text-right">構成比</Th><Th>カップル来店</Th></tr>
+            </thead>
+            <tbody>
+              {ranked.map((a, i) => {
+                const m = info.get(a.id)
+                const sum = a.entry + a.extra
+                return (
+                  <tr key={a.id} className="border-t border-line">
+                    <Td className="text-center">
+                      <span className={cx('inline-flex size-7 items-center justify-center rounded-full text-[12px] font-bold', i < 3 ? 'btn-brand' : 'bg-[#f0eef4] text-sub')}>{i + 1}</span>
+                    </Td>
+                    <Td><Link href={`/members/${a.id}`} className="font-medium hover:text-brand">{m?.no}</Link></Td>
+                    <Td className="max-w-44 truncate font-medium">{m?.handle}{m?.status === 'banned' && <Badge tone="red" className="ml-1.5">出禁</Badge>}</Td>
+                    <Td className={m?.gender === '男性' ? 'text-info' : 'text-[#c8457e]'}>{m?.gender}</Td>
+                    <Td className="text-right">{a.visits}回</Td>
+                    <Td className="text-right">{yen(a.entry)}</Td>
+                    <Td className="text-right">{a.extra ? yen(a.extra) : <span className="text-mute">—</span>}</Td>
+                    <Td className="text-right font-bold">{yen(sum)}</Td>
+                    <Td className="text-right text-sub">{total ? ((sum / total) * 100).toFixed(1) : '0.0'}%</Td>
+                    <Td className="max-w-72 truncate text-[12px] text-sub">
+                      {a.cp > 0 && <span>主として{a.cp}回（同伴：{[...a.partners].map(([id, n]) => `${name(id)}${n > 1 ? `×${n}` : ''}`).join('、')}）</span>}
+                      {a.asPartner > 0 && <span className="block">同伴者として{a.asPartner}回（{[...a.mains].map(name).join('、')}）</span>}
+                      {a.cp === 0 && a.asPartner === 0 && <span className="text-mute">—</span>}
+                    </Td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : <Empty>この月の来店はありません</Empty>}
+      <p className="px-3 pt-3 text-[11px] text-mute">
+        合計＝入場時の会計（入場料・割引後＋入会金等）＋ドリンク・延長料金。取消は除きます。カップル来店の金額は主会員に計上し、来店回数は同伴者にも数えます。
+      </p>
+    </Card>
   )
 }
 
