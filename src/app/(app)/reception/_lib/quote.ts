@@ -12,24 +12,12 @@ export interface Quote {
   base: number
   /** 調整後の入場料（調整なしなら base） */
   fee: number
-  /** 割引の合計（U30割引＋リピーター割引） */
   discount: number
-  /** 割引のうち U30割引 */
-  u30Discount: number
-  /** 割引のうちリピーター割引 */
-  repeatDiscount: number
   discountReason: string
   joinFee: number
   annualFee: number
   total: number
   lines: QuoteLine[]
-}
-
-/** 割引の候補（eligible：対象か、cap：割引額の上限、reason：理由） */
-export interface DiscountOffer {
-  eligible: boolean
-  cap: number
-  reason: string
 }
 
 export function buildQuote(p: {
@@ -38,30 +26,14 @@ export function buildQuote(p: {
   base: number
   /** オーナーによる入場料の調整（null なら調整なし） */
   override?: number | null
-  /** リピーター割引 */
-  discount?: DiscountOffer
-  /** U30割引 */
-  u30?: DiscountOffer
-  /** U30割引とリピーター割引を併用するか（しない場合は金額の大きい方。同額なら U30） */
-  combine?: boolean
+  discount?: { eligible: boolean; cap: number; reason: string }
   joinFee?: number
   joinNote?: string
   annualFee?: number
   annualNote?: string
 }): Quote {
   const fee = p.override ?? p.base
-  const repeatOffer = p.discount?.eligible ? Math.min(fee, p.discount.cap) : 0
-  const u30Offer = p.u30?.eligible ? Math.min(fee, p.u30.cap) : 0
-  let u30Discount = 0
-  let repeatDiscount = 0
-  if (p.combine) {
-    u30Discount = u30Offer
-    repeatDiscount = Math.min(repeatOffer, fee - u30Offer)
-  } else if (u30Offer > 0 && u30Offer >= repeatOffer) u30Discount = u30Offer
-  else repeatDiscount = repeatOffer
-  const discount = u30Discount + repeatDiscount
-  // 併用しない設定で両方の対象だった場合は、適用しなかった方を注記する
-  const both = !p.combine && u30Offer > 0 && repeatOffer > 0
+  const discount = p.discount?.eligible ? Math.min(fee, p.discount.cap) : 0
   const joinFee = p.joinFee ?? 0
   const annualFee = p.annualFee ?? 0
   const lines: QuoteLine[] = [
@@ -71,13 +43,11 @@ export function buildQuote(p: {
       note: p.override != null && p.override !== p.base ? `通常 ¥${p.base.toLocaleString('ja-JP')} から調整` : undefined,
     },
   ]
-  if (u30Discount) lines.push({ label: 'U30割引', amount: -u30Discount, note: [p.u30?.reason, both && 'リピーター割引とは併用なし（大きい方を適用）'].filter(Boolean).join('・') })
-  if (repeatDiscount) lines.push({ label: 'リピーター割引', amount: -repeatDiscount, note: [p.discount?.reason, both && 'U30割引とは併用なし（大きい方を適用）'].filter(Boolean).join('・') })
+  if (discount) lines.push({ label: 'リピーター割引', amount: -discount, note: p.discount?.reason })
   if (joinFee) lines.push({ label: '入会金', amount: joinFee, note: p.joinNote })
   if (annualFee) lines.push({ label: '年会費', amount: annualFee, note: p.annualNote })
   return {
-    base: p.base, fee, discount, u30Discount, repeatDiscount,
-    discountReason: [u30Discount ? p.u30?.reason : '', repeatDiscount ? p.discount?.reason : ''].filter(Boolean).join('／'), joinFee, annualFee,
+    base: p.base, fee, discount, discountReason: discount ? (p.discount?.reason ?? '') : '', joinFee, annualFee,
     total: fee - discount + joinFee + annualFee, lines,
   }
 }

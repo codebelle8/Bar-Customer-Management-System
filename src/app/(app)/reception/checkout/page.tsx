@@ -8,7 +8,7 @@ import * as t from '@/db/schema'
 import { query, requireCtx } from '@/lib/dal'
 import { fmtDateTime, fmtJaDate, fmtTime, jstParts } from '@/lib/format'
 import { InStorePicker } from '../_components/InStorePicker'
-import { DiscountRows, MoneyRow, Notice } from '../_components/bits'
+import { MoneyRow, Notice } from '../_components/bits'
 import { VisitHeader } from '../_components/VisitHeader'
 import { inStoreRows, isUuid, loadToday, loadVisit, PART_LABEL } from '../_lib/server'
 import { CheckoutPanel } from './CheckoutPanel'
@@ -75,7 +75,7 @@ export default async function CheckoutPage({ searchParams }: PageProps<'/recepti
       <Card title="入店時のお支払い（精算済み）" action={<span className="text-[12px] text-sub">{fmtJaDate(v.businessDate)}・{v.dayType}・{PART_LABEL[v.dayPart]}{data.staffName ? `・受付 ${data.staffName}` : ''}</span>}>
         <div className="divide-y divide-line">
           <MoneyRow label={`入場料（${v.category}）`} amount={v.entranceFee} />
-          <DiscountRows discount={v.discount} u30Discount={v.u30Discount} reason={v.discountReason} />
+          {v.discount > 0 && <MoneyRow label="リピーター割引" amount={-v.discount} note={v.discountReason} />}
           {v.joinFee > 0 && <MoneyRow label="入会金" amount={v.joinFee} />}
           {v.annualFee > 0 && <MoneyRow label="年会費" amount={v.annualFee} />}
           <MoneyRow label="入店時 お支払い済み" amount={v.entryTotal} strong />

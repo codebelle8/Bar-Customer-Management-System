@@ -5,9 +5,7 @@ import * as t from './schema'
 import type { CalendarDay, Category, DayPart, DayType } from './schema'
 import { DEFAULT_TERMS, DEFAULT_TERMS_VERSION, REFERRALS } from '../lib/terms'
 import { businessDateOf, dayInfo, priceOf } from '../lib/pricing'
-import { addDays, addMonths, ageOn, weekdayOf } from '../lib/format'
-import { u30DiscountFor } from '../lib/u30'
-import { buildQuote } from '../app/(app)/reception/_lib/quote'
+import { addDays, addMonths, weekdayOf } from '../lib/format'
 import october from './seed-data/october-2026.json'
 
 // 店舗の内部ID（画面には表示しない。既存データとの互換のため値は変えない）
@@ -239,9 +237,7 @@ async function seedDemo(db: DB) {
     if (!list.length) return
     const base = list.map((v) => priceOf(v.cat, part, day, ueRules))
     let fees = base.slice()
-    const discounts = list.map(() => 0)
-    const u30s = list.map(() => 0)
-    const reasons = list.map(() => '')
+    let discounts = list.map(() => 0)
     const prevYm = addMonths(date.slice(0, 7), -1)
     if (entranceTarget !== null) {
       // 10月：実績の入場料合計に合わせて調整（女性以外の料金を按分）
@@ -257,21 +253,12 @@ async function seedDemo(db: DB) {
         acc += fees[i]
       })
     } else {
-      // 11月以降：料金表どおり＋割引（リピーター割引・U30割引。受付画面と同じ計算）
-      fees = base.slice()
-      list.forEach((v, i) => {
-        const prevVisits = monthCount.get(`${v.member.id}|${prevYm}`) ?? 0
-        const age = v.member.birthday ? ageOn(v.member.birthday, date) : null
-        const u = u30DiscountFor({ rule: settings, category: v.cat, gender: v.member.gender, age, fee: fees[i] })
-        const q = buildQuote({
-          category: v.cat, partLabel: '', base: fees[i],
-          discount: { eligible: v.cat === '男性' && prevVisits >= settings.discountMinVisits, cap: settings.discountAmount, reason: `前月${settings.discountMinVisits}回以上来店 リピーター割引` },
-          u30: { eligible: u.amount > 0, cap: settings.u30Amount, reason: u.reason }, combine: settings.u30Combine,
-        })
-        discounts[i] = q.discount
-        u30s[i] = q.u30Discount
-        reasons[i] = q.discountReason
+      // 11月以降：料金表どおり＋リピーター割引
+      discounts = list.map((v, i) => {
+        if (v.cat !== '男性') return 0
+        return (monthCount.get(`${v.member.id}|${prevYm}`) ?? 0) >= settings.discountMinVisits ? Math.min(fees[i], settings.discountAmount) : 0
       })
+      fees = base.slice()
     }
     const startMin = part === '昼' ? 12 * 60 : 19 * 60
     const span = part === '昼' ? 6 * 60 + 45 : 7 * 60 + 30
@@ -285,7 +272,7 @@ async function seedDemo(db: DB) {
       const row: V = {
         id: crypto.randomUUID(), storeId: HARNES, memberId: v.member.id, partnerMemberId: v.partner?.id ?? null, businessDate: date,
         dayPart: part, dayType: day.type, category: v.cat, isNew: v.isNew, entranceFee: fees[i], discount: discounts[i],
-        u30Discount: u30s[i], discountReason: reasons[i], joinFee: join, annualFee: 0,
+        discountReason: discounts[i] ? `前月${settings.discountMinVisits}回以上来店 リピーター割引` : '', joinFee: join, annualFee: 0,
         entryTotal: fees[i] - discounts[i] + join, extraTotal: 0, status: outAt > now ? 'in' : 'out', checkedInAt,
         checkedOutAt: outAt > now ? null : outAt, staffId: pick(staffIds), outStaffId: outAt > now ? null : pick(staffIds),
       }

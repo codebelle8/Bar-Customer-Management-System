@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
-import { desc, eq, isNull, or } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { Database, Info, Lock, MapPin, ShieldCheck } from 'lucide-react'
-import { Badge, Card, Empty, Field, Td, Th } from '@/components/ui'
+import { Badge, Card, Field } from '@/components/ui'
 import { ActionForm, SubmitButton } from '@/components/settings/form'
 import { NoteBox, Switch, Tabs, YenInput } from '@/components/settings/fields'
 import * as t from '@/db/schema'
 import { query, requireOwner } from '@/lib/dal'
-import { fmtDateTime, yen } from '@/lib/format'
+import { yen } from '@/lib/format'
 import { businessDateOf } from '@/lib/pricing'
 import { DEFAULT_TERMS, DEFAULT_TERMS_VERSION } from '@/lib/terms'
 import { saveFees } from './actions'
@@ -18,7 +18,6 @@ const TABS = [
   { key: 'store', label: '店舗情報' },
   { key: 'fees', label: '料金・会費' },
   { key: 'terms', label: '会員規約' },
-  { key: 'logs', label: '操作ログ' },
 ] as const
 type TabKey = (typeof TABS)[number]['key']
 
@@ -38,16 +37,7 @@ export default async function SettingsPage({ searchParams }: PageProps<'/setting
         if (/^\d+$/.test(rest)) maxUsed = Math.max(maxUsed ?? 0, Number(rest))
       }
     }
-    const logs =
-      tab === 'logs'
-        ? await tx
-            .select()
-            .from(t.auditLogs)
-            .where(or(eq(t.auditLogs.storeId, ctx.storeId), isNull(t.auditLogs.storeId)))
-            .orderBy(desc(t.auditLogs.createdAt))
-            .limit(100)
-        : []
-    return { s, today, maxUsed, logs }
+    return { s, today, maxUsed }
   }, ctx)
   const { s } = data
 
@@ -117,28 +107,6 @@ export default async function SettingsPage({ searchParams }: PageProps<'/setting
       {tab === 'terms' && (
         <Card title="会員規約" action={<span className="text-[12px] text-sub">現在の版：<b className="font-mono text-ink">{s.termsVersion}</b>{s.termsVersion === DEFAULT_TERMS_VERSION && s.termsText.trim() === DEFAULT_TERMS.trim() && <Badge tone="gray" className="ml-2">初期の規約</Badge>}</span>}>
           <TermsEditor version={s.termsVersion} text={s.termsText} isDefault={s.termsText.trim() === DEFAULT_TERMS.trim() && s.termsVersion === DEFAULT_TERMS_VERSION} today={data.today} />
-        </Card>
-      )}
-
-      {tab === 'logs' && (
-        <Card title="操作ログ" action={<span className="text-[12px] text-sub">最新{data.logs.length}件（{ctx.store.shortName}・共通）</span>} bodyClass="px-2 pt-2 pb-3">
-          {data.logs.length ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-[13px]">
-                <thead className="bg-[#f8f6fc]"><tr><Th>日時</Th><Th>担当者</Th><Th>操作</Th><Th>対象・内容</Th></tr></thead>
-                <tbody>
-                  {data.logs.map((l) => (
-                    <tr key={l.id} className="border-t border-line align-top">
-                      <Td className="text-sub tabular-nums">{fmtDateTime(l.createdAt)}</Td>
-                      <Td>{l.userName || '—'}</Td>
-                      <Td className="font-medium">{l.action}{!l.storeId && <Badge tone="gray" className="ml-1.5">共通</Badge>}</Td>
-                      <Td className="max-w-[520px] whitespace-normal break-words text-sub">{l.target || '—'}</Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : <Empty>操作ログはまだありません</Empty>}
         </Card>
       )}
     </div>

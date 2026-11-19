@@ -69,7 +69,6 @@ export async function loadDay(tx: Tx, storeId: string, date: string) {
       fresh: sql<number>`count(*) filter (where ${t.visits.isNew})`.mapWith(Number),
       fee: sql<number>`coalesce(sum(${t.visits.entryTotal}), 0)`.mapWith(Number),
       discount: sql<number>`coalesce(sum(${t.visits.discount}), 0)`.mapWith(Number),
-      u30Discount: sql<number>`coalesce(sum(${t.visits.u30Discount}), 0)`.mapWith(Number),
     })
     .from(t.visits)
     .where(and(eq(t.visits.storeId, storeId), eq(t.visits.businessDate, date), ne(t.visits.status, 'void')))

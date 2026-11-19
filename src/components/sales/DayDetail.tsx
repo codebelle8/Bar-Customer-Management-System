@@ -4,7 +4,6 @@ import { GlassWater, ReceiptText, Users } from 'lucide-react'
 import type { DayData, DayEntry } from '@/app/(app)/sales/data'
 import { Badge, Card, Td, Th, cx } from '@/components/ui'
 import { fmtMD, jstParts, num, yen } from '@/lib/format'
-import { discountParts } from '@/lib/u30'
 import { DAY_TYPE_STYLE } from '@/lib/pricing'
 import { KIND_LABEL, type ExpenseKind } from './constants'
 import { DeleteExpenseButton, ExpenseForm } from './ExpenseForm'
@@ -43,7 +42,6 @@ export function DaySummary({ data }: { data: DayData }) {
   const cell = (part: '昼' | '夜', cat: '男性' | '女性' | 'カップル') => data.breakdown.find((b) => b.part === part && b.cat === cat)
   const fresh = data.breakdown.reduce((a, b) => a + b.fresh, 0)
   const discount = data.breakdown.reduce((a, b) => a + b.discount, 0)
-  const u30Discount = data.breakdown.reduce((a, b) => a + b.u30Discount, 0)
   const parts = [
     { part: '昼' as const, label: '昼の部', people: r.maleDay + r.femaleDay + r.cpDay * 2, entrance: r.entranceDay, drink: r.drinkDay, sales: r.salesDay },
     { part: '夜' as const, label: '夜の部', people: r.maleNight + r.femaleNight + r.cpNight * 2, entrance: r.entranceNight, drink: r.drinkNight, sales: r.salesNight },
@@ -106,7 +104,7 @@ export function DaySummary({ data }: { data: DayData }) {
         </div>
         <p className="mt-2 text-[11px] text-mute">
           区分ごとの金額は入場時の会計（入場料・割引後＋入会金等）。売上の入場料には延長料金を含みます。
-          {discount > 0 && <>割引 −{yen(discount)}（{discountParts(discount, u30Discount)}）。</>}
+          {discount > 0 && <>リピーター割引 −{yen(discount)}。</>}
         </p>
       </Card>
 

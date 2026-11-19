@@ -7,9 +7,8 @@ import { Button, Card, Textarea, buttonCls, cx } from '@/components/ui'
 import type { Category } from '@/db/schema'
 import { ageOn, fmtJaDate } from '@/lib/format'
 import type { TermsLine } from '@/lib/terms'
-import { isU30, u30DiscountFor, u30GenderLabel, type U30Rule } from '@/lib/u30'
 import { checkHandleAction, registerMemberAction } from '../actions'
-import { MoneyRow, Notice, U30Badge } from '../_components/bits'
+import { MoneyRow, Notice } from '../_components/bits'
 import { CashBox, paidOk } from '../_components/CashBox'
 import { CheckTile, Choice } from '../_components/CheckTile'
 import { MemberPicker } from '../_components/MemberPicker'
@@ -29,7 +28,6 @@ export interface WizardProps {
   today: TodayView & { partLabel: string; dayTypeLabel: string }
   joinFee: number
   annual: { enabled: boolean; fee: number }
-  u30Rule: U30Rule
   photoDocs: string[]
   subDocs: string[]
   referrals: string[]
@@ -84,12 +82,10 @@ export function NewMemberWizard(p: WizardProps) {
   const cat: Category = category || (gender || '男性')
   const partnerNew = cat === 'カップル' && !!partner?.newToday
   const partnerAnnual = partnerNew && p.annual.enabled && !!partner?.feeDue
-  const u30 = gender ? u30DiscountFor({ rule: p.u30Rule, category: cat, gender, age, fee: p.today.prices[cat] }) : { amount: 0, reason: '' }
   const quote = registerOnly
     ? null
     : buildQuote({
         category: cat, partLabel: p.today.partLabel, base: p.today.prices[cat],
-        u30: { eligible: u30.amount > 0, cap: p.u30Rule.u30Amount, reason: u30.reason }, combine: p.u30Rule.u30Combine,
         joinFee: p.joinFee * (partnerNew ? 2 : 1), joinNote: partnerNew ? `パートナー（${partner?.memberNo}・本日登録）分を含む2名分` : undefined,
         annualFee: p.annual.enabled ? p.annual.fee * (partnerAnnual ? 2 : 1) : 0,
       })
@@ -262,7 +258,7 @@ export function NewMemberWizard(p: WizardProps) {
               <span className="font-bold text-brand tabular-nums">{p.nextMemberNo}</span>
               <span className="text-[16px] font-bold">{handle}</span>
               <span>{gender}</span>
-              {age != null && <span className="inline-flex items-center gap-1.5">{age}歳{gender && isU30(p.u30Rule, gender, age) && <U30Badge />}</span>}
+              {age != null && <span>{age}歳</span>}
               <span className="text-sub">確認書類：{photoId}・{subId}</span>
             </div>
 
@@ -294,10 +290,7 @@ export function NewMemberWizard(p: WizardProps) {
                   {quote?.lines.map((l) => <MoneyRow key={l.label} label={l.label} amount={l.amount} note={l.note} />)}
                   <MoneyRow label="合計" amount={total} strong />
                 </div>
-                <p className="mt-1.5 text-[12px] text-sub">
-                  新規入会のお客様はリピーター割引の対象外です。
-                  {p.u30Rule.u30Enabled && `U30割引（${p.u30Rule.u30MaxAge}歳以下・${u30GenderLabel(p.u30Rule.u30Gender)}・カップルを除く）は新規入会でも適用されます。`}
-                </p>
+                <p className="mt-1.5 text-[12px] text-sub">新規入会のお客様はリピーター割引の対象外です。</p>
               </>
             )}
           </Card>

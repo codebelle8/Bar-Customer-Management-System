@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CircleAlert, CircleCheck, Download, FileSpreadsheet, LoaderCircle, RotateCcw, TriangleAlert, Upload } from 'lucide-react'
+import { CircleAlert, CircleCheck, FileSpreadsheet, LoaderCircle, RotateCcw, TriangleAlert, Upload } from 'lucide-react'
 import { findExistingNumbers, importMembers, type ImportResult } from '@/app/(app)/members/actions'
 import { Badge, Button, Card, Select, Td, Th, buttonCls, cx } from '@/components/ui'
 import { ageOn } from '@/lib/format'
@@ -35,7 +35,7 @@ interface Sheet {
   headerIdx: number
 }
 
-export function ImportClient({ prefix, todayJst, joinDefault, isOwner, storeName }: { prefix: string; todayJst: string; joinDefault: string; isOwner: boolean; storeName: string }) {
+export function ImportClient({ prefix, todayJst, joinDefault, storeName }: { prefix: string; todayJst: string; joinDefault: string; storeName: string }) {
   const [sheet, setSheet] = useState<Sheet | null>(null)
   const [mapping, setMapping] = useState<Mapping | null>(null)
   const [parseError, setParseError] = useState('')
@@ -265,14 +265,6 @@ export function ImportClient({ prefix, todayJst, joinDefault, isOwner, storeName
         <Card title="テンプレート" className="self-start">
           <p className="text-[13px] text-sub">記入用の Excel ファイルです。「記入方法」シートに書き方の説明があります。</p>
           <Button size="lg" variant="outline" className="mt-3 w-full" onClick={downloadTemplate}><FileSpreadsheet className="size-4" />テンプレートをダウンロード</Button>
-          {isOwner && (
-            <>
-              <h3 className="section-title mt-5 mb-2 text-[15px]">会員データの書き出し</h3>
-              <p className="text-[13px] text-sub">{storeName}の全会員を Excel で書き出します（オーナーのみ・操作ログに記録）。</p>
-              {/* ファイルのダウンロード（Link だと先読みで書き出しが走るため a 要素を使う） */}
-              <a href="/members/export" download className={cx(buttonCls('default', 'lg'), 'mt-3 w-full')}><Download className="size-4" />全会員を書き出す（.xlsx）</a>
-            </>
-          )}
         </Card>
       </div>
 

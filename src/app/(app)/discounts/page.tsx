@@ -11,8 +11,7 @@ import { query, requireCtx } from '@/lib/dal'
 import { addMonths, daysInMonth, fmtJaDate, fmtJaMonth, fmtMD, WEEK_JA, weekdayOf, yen } from '@/lib/format'
 import { businessDateOf } from '@/lib/pricing'
 import { visitCounts } from '@/lib/stats'
-import { u30GenderLabel, u30RuleText, U30_GENDERS } from '@/lib/u30'
-import { saveDiscountRule, saveU30Rule } from './actions'
+import { saveDiscountRule } from './actions'
 
 export const metadata: Metadata = { title: '割引・特典' }
 
@@ -58,9 +57,9 @@ export default async function DiscountsPage({ searchParams }: PageProps<'/discou
     const last = new Map<string, string>()
     if (ids.length) {
       const u = await tx
-        .select({ m: t.visits.memberId, n: count(), amount: sql<number>`coalesce(sum(${t.visits.discount} - ${t.visits.u30Discount}), 0)`.mapWith(Number) })
+        .select({ m: t.visits.memberId, n: count(), amount: sql<number>`coalesce(sum(${t.visits.discount}), 0)`.mapWith(Number) })
         .from(t.visits)
-        .where(and(eq(t.visits.storeId, ctx.storeId), between(t.visits.businessDate, mFrom, mTo), gt(t.visits.discount, t.visits.u30Discount), ne(t.visits.status, 'void'), inArray(t.visits.memberId, ids)))
+        .where(and(eq(t.visits.storeId, ctx.storeId), between(t.visits.businessDate, mFrom, mTo), gt(t.visits.discount, 0), ne(t.visits.status, 'void'), inArray(t.visits.memberId, ids)))
         .groupBy(t.visits.memberId)
       for (const r of u) used.set(r.m, { n: r.n, amount: r.amount })
       const base = and(eq(t.visits.storeId, ctx.storeId), ne(t.visits.status, 'void'))
@@ -68,26 +67,11 @@ export default async function DiscountsPage({ searchParams }: PageProps<'/discou
       const b = await tx.select({ m: t.visits.partnerMemberId, d: max(t.visits.businessDate) }).from(t.visits).where(and(base, inArray(t.visits.partnerMemberId, ids))).groupBy(t.visits.partnerMemberId)
       for (const r of [...a, ...b]) if (r.m && r.d && (!last.has(r.m) || last.get(r.m)! < r.d)) last.set(r.m, r.d)
     }
-    // 今月の割引の合計（店舗全体。リピーター割引と U30割引に分ける）
+    // 今月の割引の合計（店舗全体）
     const [total] = await tx
-      .select({
-        repeatN: sql<number>`count(*) filter (where ${t.visits.discount} > ${t.visits.u30Discount})`.mapWith(Number),
-        repeatAmount: sql<number>`coalesce(sum(${t.visits.discount} - ${t.visits.u30Discount}), 0)`.mapWith(Number),
-        u30N: sql<number>`count(*) filter (where ${t.visits.u30Discount} > 0)`.mapWith(Number),
-        u30Amount: sql<number>`coalesce(sum(${t.visits.u30Discount}), 0)`.mapWith(Number),
-      })
+      .select({ n: count(), amount: sql<number>`coalesce(sum(${t.visits.discount}), 0)`.mapWith(Number) })
       .from(t.visits)
       .where(and(eq(t.visits.storeId, ctx.storeId), between(t.visits.businessDate, mFrom, mTo), gt(t.visits.discount, 0), ne(t.visits.status, 'void')))
-    // U30割引の対象の会員数（有効な会員・本日時点の年齢）。年齢が上限以下 ⇔ 生年月日が「本日の (上限+1) 年前の日付」より後
-    const cutoff = `${+today.slice(0, 4) - (s.u30MaxAge + 1)}${today.slice(4)}`
-    const u30Gender = s.u30Gender === '両方' ? undefined : eq(t.members.gender, s.u30Gender)
-    const [u30Members] = await tx
-      .select({
-        n: sql<number>`count(*) filter (where ${t.members.birthday}::text > ${cutoff})`.mapWith(Number),
-        noBirthday: sql<number>`count(*) filter (where ${t.members.birthday} is null)`.mapWith(Number),
-      })
-      .from(t.members)
-      .where(and(eq(t.members.storeId, ctx.storeId), eq(t.members.status, 'active'), u30Gender))
 
     const rows: Row[] = members
       .filter((m) => ids.includes(m.id))
@@ -98,7 +82,7 @@ export default async function DiscountsPage({ searchParams }: PageProps<'/discou
       }))
     const byNo = (a: Row, b: Row) => a.memberNo.localeCompare(b.memberNo, 'ja', { numeric: true })
     return {
-      s, today, month, prev, total, u30Members,
+      s, today, month, prev, total,
       current: rows.filter((r) => r.prev >= min).sort((a, b) => b.prev - a.prev || byNo(a, b)),
       next: rows.filter((r) => r.cur >= min).sort((a, b) => b.cur - a.cur || byNo(a, b)),
       near: rows.filter((r) => r.cur >= 1 && r.cur < min && r.cur >= min - 2).sort((a, b) => b.cur - a.cur || byNo(a, b)),
@@ -120,10 +104,7 @@ export default async function DiscountsPage({ searchParams }: PageProps<'/discou
 
   return (
     <div key={ctx.storeId} className="animate-fade-in space-y-5">
-      <div className="space-y-2">
-        <RuleBanner s={s} isOwner={ctx.isOwner} />
-        <U30Banner s={s} isOwner={ctx.isOwner} members={data.u30Members} />
-      </div>
+      <RuleBanner s={s} isOwner={ctx.isOwner} />
 
       <div className="grid gap-4 sm:grid-cols-3">
         {tabs.map(({ key, label, desc, n, icon: Icon }) => (
@@ -219,25 +200,21 @@ export default async function DiscountsPage({ searchParams }: PageProps<'/discou
           )}
         </Card>
 
-        <div className="space-y-5">
-          <Card title="リピーター割引のルール" action={!ctx.isOwner && <Badge tone="gray"><Lock className="mr-1 size-3" />閲覧のみ</Badge>}>
+        <div className="space-y-5 xl:sticky xl:top-24">
+          <Card title="割引ルール" action={!ctx.isOwner && <Badge tone="gray"><Lock className="mr-1 size-3" />閲覧のみ</Badge>}>
             {ctx.isOwner ? <RuleForm s={s} /> : <RuleView s={s} />}
           </Card>
-          <Card title="U30割引のルール" action={!ctx.isOwner && <Badge tone="gray"><Lock className="mr-1 size-3" />閲覧のみ</Badge>}>
-            {ctx.isOwner ? <U30Form s={s} /> : <U30View s={s} />}
-          </Card>
           <Card title={`${mCur}月の割引実績`}>
-            <table className="w-full text-[13px] tabular-nums" data-testid="discount-totals">
-              <thead>
-                <tr className="text-[12px] text-sub"><th className="pb-2 text-left font-medium">種類</th><th className="pb-2 text-right font-medium">来店</th><th className="pb-2 text-right font-medium">割引額</th></tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                <tr><td className="py-2">リピーター割引</td><td className="py-2 text-right">{data.total.repeatN}件</td><td className="py-2 text-right font-bold">{yen(data.total.repeatAmount)}</td></tr>
-                <tr><td className="py-2">U30割引</td><td className="py-2 text-right">{data.total.u30N}件</td><td className="py-2 text-right font-bold">{yen(data.total.u30Amount)}</td></tr>
-                <tr className="font-bold"><td className="py-2">合計</td><td className="py-2 text-right" /><td className="py-2 text-right">{yen(data.total.repeatAmount + data.total.u30Amount)}</td></tr>
-              </tbody>
-            </table>
-            <p className="mt-2 text-[11px] text-mute">併用した来店は両方の件数に入ります。取消は除きます。</p>
+            <dl className="grid grid-cols-2 gap-3 text-center">
+              <div className="rounded-xl bg-page px-3 py-3">
+                <dt className="text-[12px] text-sub">割引した来店</dt>
+                <dd className="mt-1 text-[22px] font-bold tabular-nums">{data.total.n}<span className="ml-0.5 text-[13px]">件</span></dd>
+              </div>
+              <div className="rounded-xl bg-page px-3 py-3">
+                <dt className="text-[12px] text-sub">割引額の合計</dt>
+                <dd className="mt-1 text-[22px] font-bold tabular-nums">{yen(data.total.amount)}</dd>
+              </div>
+            </dl>
           </Card>
         </div>
       </div>
@@ -247,69 +224,6 @@ export default async function DiscountsPage({ searchParams }: PageProps<'/discou
 
 function ruleText(s: StoreSettings) {
   return `前月に${s.discountMinVisits}回以上来店した${s.discountGender}会員は、当月の入場料から${yen(s.discountAmount)}割引（${s.discountScope === 'every' ? '当月の来店すべて' : '当月の最初の来店のみ'}）`
-}
-
-function U30Banner({ s, isOwner, members }: { s: StoreSettings; isOwner: boolean; members: { n: number; noBirthday: number } }) {
-  return (
-    <div className={cx('card flex flex-wrap items-center gap-3 px-5 py-3.5', !s.u30Enabled && 'border-[#f2c2cb] bg-[#fffafb]')} data-testid="u30-banner">
-      <Sparkles className={cx('size-5 shrink-0', s.u30Enabled ? 'text-brand' : 'text-mute')} />
-      <span className="text-[14px] font-bold">U30割引</span>
-      {s.u30Enabled ? <Badge tone="green">適用中</Badge> : <Badge tone="red">停止中</Badge>}
-      <span className={cx('min-w-0 flex-1 text-[13px]', s.u30Enabled ? 'text-ink' : 'text-mute line-through')}>{u30RuleText(s)}</span>
-      <span className="text-[12px] text-sub">
-        対象の会員 <b className="text-[15px] text-ink tabular-nums">{members.n}</b>名
-        {members.noBirthday > 0 && <>・生年月日未登録 {members.noBirthday}名</>}
-      </span>
-      {isOwner && <a href="#u30" className={cx(buttonCls('default', 'sm'), 'xl:hidden')}>ルールを変更</a>}
-    </div>
-  )
-}
-
-function U30View({ s }: { s: StoreSettings }) {
-  const items: [string, string][] = [
-    ['状態', s.u30Enabled ? '適用中' : '停止中'],
-    ['対象年齢', `${s.u30MaxAge}歳以下（来店日時点）`],
-    ['割引額', `${yen(s.u30Amount)}（入場料から）`],
-    ['対象', `${u30GenderLabel(s.u30Gender)}（カップルは対象外）`],
-    ['リピーター割引', s.u30Combine ? '併用する' : '併用しない（大きい方を適用）'],
-  ]
-  return (
-    <div>
-      <dl className="divide-y divide-line text-[13px]">
-        {items.map(([k, v]) => (
-          <div key={k} className="flex justify-between gap-3 py-2.5"><dt className="text-sub">{k}</dt><dd className="text-right font-medium">{v}</dd></div>
-        ))}
-      </dl>
-      <p className="mt-3 text-[12px] text-mute">ルールの変更はオーナーのみ行えます。</p>
-    </div>
-  )
-}
-
-function U30Form({ s }: { s: StoreSettings }) {
-  return (
-    <ActionForm action={saveU30Rule} className="space-y-4" id="u30">
-      <Switch name="u30Enabled" defaultChecked={s.u30Enabled} label="U30割引を適用する" />
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="対象年齢（以下）" required>
-          <div className="relative">
-            <Input type="number" name="u30MaxAge" defaultValue={s.u30MaxAge} min={20} max={99} required className="pr-10 text-right tabular-nums" />
-            <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-[13px] text-mute">歳</span>
-          </div>
-        </Field>
-        <Field label="割引額" required><YenInput name="u30Amount" defaultValue={s.u30Amount} required /></Field>
-      </div>
-      <Field label="対象性別">
-        <Select name="u30Gender" defaultValue={s.u30Gender}>
-          {U30_GENDERS.map((g) => <option key={g} value={g}>{u30GenderLabel(g)}</option>)}
-        </Select>
-      </Field>
-      <Switch name="u30Combine" defaultChecked={s.u30Combine} label="リピーター割引と併用する" />
-      <NoteBox tone="info" className="text-[12px]">
-        年齢は会員の生年月日から来店日時点で自動判定します。併用しない場合は、金額の大きい方を適用します（同額ならU30割引）。カップルでの来店は対象外です。
-      </NoteBox>
-      <SubmitButton className="w-full">U30割引のルールを保存</SubmitButton>
-    </ActionForm>
-  )
 }
 
 function RuleBanner({ s, isOwner }: { s: StoreSettings; isOwner: boolean }) {

@@ -1,4 +1,4 @@
-// 会員ごとの来店集計（一覧・書き出しで共通）
+// 会員ごとの来店集計（会員一覧で使用）
 import 'server-only'
 import { and, eq, isNotNull, ne, sql } from 'drizzle-orm'
 import type { Tx } from '@/db/client'

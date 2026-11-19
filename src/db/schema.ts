@@ -6,7 +6,6 @@ export type DayPart = '昼' | '夜'
 export type Category = '男性' | '女性' | 'カップル'
 /** owner：全店舗のオーナー / store_owner：所属店舗のみのオーナー / staff：所属店舗のスタッフ */
 export type Role = 'owner' | 'store_owner' | 'staff'
-export type U30Gender = '男性' | '女性' | '両方'
 export type CustomPrices = Partial<Record<DayPart, Partial<Record<Category, number>>>>
 
 const ts = (name: string) => timestamp(name, { withTimezone: true, mode: 'date' })
@@ -46,11 +45,6 @@ export const storeSettings = pgTable('store_settings', {
   discountAmount: integer('discount_amount').notNull().default(2000),
   discountGender: text('discount_gender').notNull().default('男性'),
   discountScope: text('discount_scope').$type<'every' | 'once'>().notNull().default('every'),
-  u30Enabled: boolean('u30_enabled').notNull().default(true),
-  u30MaxAge: integer('u30_max_age').notNull().default(30),
-  u30Amount: integer('u30_amount').notNull().default(1000),
-  u30Gender: text('u30_gender').$type<U30Gender>().notNull().default('男性'),
-  u30Combine: boolean('u30_combine').notNull().default(false),
   nextMemberNo: integer('next_member_no').notNull().default(10001),
   termsVersion: text('terms_version').notNull().default('1'),
   termsText: text('terms_text').notNull().default(''),
@@ -116,8 +110,6 @@ export const visits = pgTable('visits', {
   entranceFee: integer('entrance_fee').notNull(),
   discount: integer('discount').notNull().default(0),
   discountReason: text('discount_reason').notNull().default(''),
-  /** 割引（discount）のうち U30割引の金額 */
-  u30Discount: integer('u30_discount').notNull().default(0),
   joinFee: integer('join_fee').notNull().default(0),
   annualFee: integer('annual_fee').notNull().default(0),
   entryTotal: integer('entry_total').notNull(),

@@ -4,7 +4,6 @@ import { GlassWater, ReceiptText, Search, Sparkles, UserPlus, Users } from 'luci
 import { Badge, Card, Empty, Td, Th, buttonCls, cx } from '@/components/ui'
 import type { Category, DayPart } from '@/db/schema'
 import { query, requireCtx } from '@/lib/dal'
-import { u30GenderLabel } from '@/lib/u30'
 import { fmtJaDate, fmtMD, yen } from '@/lib/format'
 import { CATEGORIES, DAY_PARTS, DAY_TYPE_STYLE } from '@/lib/pricing'
 import { GenderBadge, Notice } from './_components/bits'
@@ -102,16 +101,12 @@ export default async function ReceptionPage({ searchParams }: PageProps<'/recept
               </tbody>
             </table>
           </div>
-          <dl className="mt-4 grid gap-2 text-[13px] sm:grid-cols-2 xl:grid-cols-4">
+          <dl className="mt-4 grid gap-2 text-[13px] sm:grid-cols-3">
             <div className="rounded-lg bg-page px-3 py-2"><dt className="text-sub">入会金（新規）</dt><dd className="text-[15px] font-bold">{yen(s.joinFee)}</dd></div>
             <div className="rounded-lg bg-page px-3 py-2"><dt className="text-sub">年会費</dt><dd className="text-[15px] font-bold">{s.annualFeeEnabled ? yen(s.annualFee) : 'なし'}</dd></div>
             <div className="rounded-lg bg-page px-3 py-2">
               <dt className="text-sub">リピーター割引</dt>
               <dd className="text-[13px] font-bold">{s.discountEnabled ? `${s.discountGender}・前月${s.discountMinVisits}回以上 −${yen(s.discountAmount)}${s.discountScope === 'once' ? '（月1回）' : ''}` : 'なし'}</dd>
-            </div>
-            <div className="rounded-lg bg-page px-3 py-2">
-              <dt className="text-sub">U30割引</dt>
-              <dd className="text-[13px] font-bold">{s.u30Enabled ? `${u30GenderLabel(s.u30Gender)}・${s.u30MaxAge}歳以下 −${yen(s.u30Amount)}${s.u30Combine ? '（併用可）' : ''}` : 'なし'}</dd>
             </div>
           </dl>
         </Card>

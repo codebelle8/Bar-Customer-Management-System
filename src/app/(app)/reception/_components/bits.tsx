@@ -61,19 +61,3 @@ export function GenderBadge({ gender }: { gender: string }) {
     </span>
   )
 }
-
-/** 来店記録の割引の行（U30割引・リピーター割引に分けて表示。discount は割引の合計） */
-export function DiscountRows({ discount, u30Discount, reason }: { discount: number; u30Discount: number; reason: string }) {
-  const repeat = discount - u30Discount
-  const reasons = reason.split('／')
-  const u30Reason = reasons.find((r) => r.includes('U30'))
-  const repeatReason = reasons.filter((r) => !r.includes('U30')).join('／')
-  return (
-    <>
-      {u30Discount > 0 && <MoneyRow label="U30割引" amount={-u30Discount} note={u30Reason || undefined} />}
-      {repeat > 0 && <MoneyRow label="リピーター割引" amount={-repeat} note={repeatReason || undefined} />}
-    </>
-  )
-}
-
-export { U30Badge } from '@/components/members/U30Badge'

@@ -16,8 +16,6 @@ import { query, requireCtx } from '@/lib/dal'
 import { addDays, addMonths, ageOn, diffDays, fmtDate, fmtDateTime, fmtJaMonth, fmtTime, jstParts, num, WEEK_JA, weekdayOf, yen } from '@/lib/format'
 import { businessDateOf, DAY_TYPE_STYLE } from '@/lib/pricing'
 import { visitCounts } from '@/lib/stats'
-import { u30GenderLabel, u30Status } from '@/lib/u30'
-import { U30Badge } from '@/components/members/U30Badge'
 
 export const metadata: Metadata = { title: '会員詳細' }
 
@@ -111,7 +109,6 @@ export default async function MemberDetailPage({ params, searchParams }: PagePro
   const eligible = discountTarget && thisMonth >= settings.discountMinVisits
   const appliedNow = discountTarget && lastMonth >= settings.discountMinVisits
   const nextMonth = addMonths(month, 1)
-  const u30 = u30Status(settings, m.gender, m.birthday, today)
   const maxBirthday = `${+jstParts(new Date()).date.slice(0, 4) - 20}${jstParts(new Date()).date.slice(4)}`
   const created = one(sp.created) === '1'
 
@@ -169,7 +166,7 @@ export default async function MemberDetailPage({ params, searchParams }: PagePro
             <dt className="text-sub">ハンドルネーム</dt><dd className="font-bold">{m.handleName}</dd>
             <dt className="text-sub">性別</dt><dd><span className={m.gender === '男性' ? 'text-info' : 'text-[#c8457e]'}>{m.gender}</span></dd>
             <dt className="text-sub">生年月日</dt>
-            <dd>{m.birthday ? <>{fmtDate(m.birthday)}<span className="ml-2 font-bold">{age}歳</span>{u30.kind === 'eligible' && <U30Badge className="ml-2" />}</> : <span className="text-mute">未登録</span>}</dd>
+            <dd>{m.birthday ? <>{fmtDate(m.birthday)}<span className="ml-2 font-bold">{age}歳</span></> : <span className="text-mute">未登録</span>}</dd>
             <dt className="text-sub">入会日</dt>
             <dd>{fmtDate(m.joinedAt)}<span className="ml-2 text-[12px] text-sub">{memberFor(diffDays(today, m.joinedAt))}</span></dd>
             <dt className="text-sub">紹介元</dt><dd>{m.referral || <span className="text-mute">—</span>}</dd>
@@ -221,7 +218,7 @@ export default async function MemberDetailPage({ params, searchParams }: PagePro
             <p className="mt-2 text-[11px] text-mute">※ 来店回数はカップルの同伴者としての来店を含みます。カップル来店の利用額は1組分の会計額です。</p>
           </Card>
 
-          <Card title="割引・特典">
+          <Card title="リピーター割引">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className={cx('rounded-xl border px-4 py-3', eligible ? 'border-[#bfe8cf] bg-[#effaf3]' : 'border-line')}>
                 <p className="flex items-center gap-1.5 text-[13px] font-bold"><Gift className="size-4 text-brand" />翌月割引（{fmtJaMonth(nextMonth)}）</p>
@@ -253,22 +250,6 @@ export default async function MemberDetailPage({ params, searchParams }: PagePro
                     <><p className="mt-1.5 text-[20px] font-bold text-mute">なし</p><p className="text-[12px] text-sub">先月の来店 {lastMonth}回（{settings.discountMinVisits}回以上で適用）</p></>
                   )
                 ) : <p className="mt-2 text-[13px] text-sub">対象外</p>}
-              </div>
-              <div className={cx('rounded-xl border px-4 py-3 sm:col-span-2', u30.kind === 'eligible' ? 'border-[#bfe8cf] bg-[#effaf3]' : 'border-line')} data-testid="u30-status">
-                <p className="flex items-center gap-1.5 text-[13px] font-bold"><Sparkles className="size-4 text-brand" />U30割引（{settings.u30MaxAge}歳以下）</p>
-                {u30.kind === 'eligible' ? (
-                  <div className="mt-1 flex flex-wrap items-baseline gap-x-3">
-                    <p className="text-[20px] font-bold text-ok">対象</p>
-                    <p className="text-[12px] text-sub">{u30.age}歳・入場料から{yen(settings.u30Amount)}引き（カップルを除く）・{fmtDate(u30.until)}まで</p>
-                  </div>
-                ) : (
-                  <p className="mt-2 text-[13px] text-sub">
-                    {u30.kind === 'off' ? 'U30割引は現在使われていません。'
-                      : u30.kind === 'gender' ? `対象外（${u30GenderLabel(settings.u30Gender)}が対象）`
-                        : u30.kind === 'nobirthday' ? '生年月日が未登録のため判定できません。会員情報の編集から登録してください。'
-                          : `対象外（${u30.age}歳）`}
-                  </p>
-                )}
               </div>
             </div>
           </Card>

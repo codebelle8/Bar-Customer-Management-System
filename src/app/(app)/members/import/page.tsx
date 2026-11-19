@@ -26,7 +26,7 @@ export default async function MemberImportPage() {
           <ShieldCheck className="size-4 text-ok" />取込先：<b className="text-ink">{ctx.store.name}</b>（会員番号の接頭辞「{ctx.store.memberPrefix}」）
         </span>
       </div>
-      <ImportClient prefix={ctx.store.memberPrefix} todayJst={jstParts(new Date()).date} joinDefault={businessDateOf(new Date(), settings)} isOwner={ctx.isOwner} storeName={ctx.store.name} />
+      <ImportClient prefix={ctx.store.memberPrefix} todayJst={jstParts(new Date()).date} joinDefault={businessDateOf(new Date(), settings)} storeName={ctx.store.name} />
     </div>
   )
 }

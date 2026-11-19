@@ -10,8 +10,6 @@ export interface MemberCard {
   handle: string
   gender: Gender
   age: number | null
-  /** U30割引の対象（年齢・性別がルールに合う。カップルでの来店は対象外） */
-  u30: boolean
   joinedAt: string
   /** 今月の来店回数（営業日基準・同伴を含む） */
   thisMonth: number

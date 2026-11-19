@@ -9,7 +9,7 @@ import { query, requireCtx } from '@/lib/dal'
 import { ageOn, fmtDate, fmtJaDate, fmtTime } from '@/lib/format'
 import { DAY_TYPE_STYLE } from '@/lib/pricing'
 import { DEFAULT_TERMS, parseTerms, PHOTO_ID_DOCS, REFERRALS, SUB_ID_DOCS, TERMS_PLEDGE } from '@/lib/terms'
-import { DiscountRows, MoneyRow, Notice } from '../_components/bits'
+import { MoneyRow, Notice } from '../_components/bits'
 import { isUuid, loadToday, memberCardById, nextFreeMemberNo, PART_LABEL } from '../_lib/server'
 import { NewMemberWizard } from './NewMemberWizard'
 
@@ -40,7 +40,6 @@ export default async function NewMemberPage({ searchParams }: PageProps<'/recept
       }}
       joinFee={s.joinFee}
       annual={{ enabled: s.annualFeeEnabled, fee: s.annualFee }}
-      u30Rule={{ u30Enabled: s.u30Enabled, u30MaxAge: s.u30MaxAge, u30Amount: s.u30Amount, u30Gender: s.u30Gender, u30Combine: s.u30Combine }}
       photoDocs={PHOTO_ID_DOCS}
       subDocs={SUB_ID_DOCS}
       referrals={REFERRALS}
@@ -93,7 +92,6 @@ async function Done({ id, paid }: { id: string; paid: number | null }) {
         <Card title="お会計（入店時）" action={<span className="text-[12px] text-sub">{fmtJaDate(v.businessDate)}・{PART_LABEL[v.dayPart]}・{fmtTime(v.checkedInAt)} 入店</span>}>
           <div className="divide-y divide-line">
             <MoneyRow label={`入場料（${v.category}）`} amount={v.entranceFee} note={partner ? `パートナー：${partner.memberNo} ${partner.handleName}` : undefined} />
-            <DiscountRows discount={v.discount} u30Discount={v.u30Discount} reason={v.discountReason} />
             {v.joinFee > 0 && <MoneyRow label="入会金" amount={v.joinFee} note={v.note || undefined} />}
             {v.annualFee > 0 && <MoneyRow label="年会費" amount={v.annualFee} />}
             <div className="flex items-end justify-between py-3">

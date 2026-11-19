@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { and, asc, desc, eq, ilike, isNotNull, lte, ne, or, sql, type SQL } from 'drizzle-orm'
-import { Ban, CalendarClock, ChevronRight, Download, FileSpreadsheet, Search, UserPlus, Users, X } from 'lucide-react'
+import { Ban, CalendarClock, ChevronRight, FileSpreadsheet, Search, UserPlus, Users, X } from 'lucide-react'
 import { AutoSubmitSelect } from '@/components/members/AutoSubmitSelect'
 import { Pager } from '@/components/members/Pager'
 import { PAGE_SIZE, STATUS_LABEL, STATUS_TONE, kanaVariants, norm, type MemberStatus } from '@/components/members/rules'
@@ -10,8 +10,6 @@ import { Badge, Card, Empty, Td, Th, buttonCls, cx, inputCls } from '@/component
 import * as t from '@/db/schema'
 import { query, requireCtx } from '@/lib/dal'
 import { addDays, ageOn, diffDays, fmtDate, num } from '@/lib/format'
-import { isU30 } from '@/lib/u30'
-import { U30Badge } from '@/components/members/U30Badge'
 import { businessDateOf } from '@/lib/pricing'
 import { memberVisitAgg } from './_lib/agg'
 
@@ -96,7 +94,7 @@ export default async function MembersPage({ searchParams }: PageProps<'/members'
       .limit(PAGE_SIZE)
       .offset((page - 1) * PAGE_SIZE)
 
-    return { today, feeOn, feeDue, feeLimit, summary, total, pages, page, rows, settings }
+    return { today, feeOn, feeDue, feeLimit, summary, total, pages, page, rows }
   }, ctx)
 
   const { today, feeOn, feeDue, feeLimit, summary, total, pages, page, rows } = data
@@ -120,10 +118,6 @@ export default async function MembersPage({ searchParams }: PageProps<'/members'
           <SummaryChip href={href({ fee: 'due', page: '' })} icon={<CalendarClock className="size-5" />} label="年会費の期限" value={summary.due} sub="14日以内・期限切れ" tone="amber" />
         )}
         <div className="ml-auto flex flex-wrap items-center gap-2 self-center">
-          {ctx.isOwner && (
-            // ファイルのダウンロード（Link だと先読みで書き出しが走るため a 要素を使う）
-            <a href="/members/export" download className={buttonCls('ghost', 'lg')}><Download className="size-5" />書き出し</a>
-          )}
           <Link href="/members/import" className={buttonCls('outline', 'lg')}><FileSpreadsheet className="size-5" />Excelで取込</Link>
           <Link href="/members/new" className={buttonCls('brand', 'lg')}><UserPlus className="size-5" />会員を追加</Link>
         </div>
@@ -193,9 +187,7 @@ export default async function MembersPage({ searchParams }: PageProps<'/members'
                       <Td><Link href={`/members/${m.id}`} className="font-bold hover:text-brand">{m.memberNo}</Link></Td>
                       <Td className="max-w-48 truncate"><Link href={`/members/${m.id}`} className="font-medium hover:text-brand">{m.handleName}</Link></Td>
                       <Td><span className={m.gender === '男性' ? 'text-info' : 'text-[#c8457e]'}>{m.gender}</span></Td>
-                      <Td className="text-right whitespace-nowrap">
-                        {m.birthday ? <>{isU30(data.settings, m.gender, ageOn(m.birthday, today)) && <U30Badge className="mr-1.5" />}{ageOn(m.birthday, today)}歳</> : <span className="text-mute">—</span>}
-                      </Td>
+                      <Td className="text-right">{m.birthday ? `${ageOn(m.birthday, today)}歳` : <span className="text-mute">—</span>}</Td>
                       <Td className="hidden xl:table-cell">{fmtDate(m.joinedAt)}</Td>
                       <Td className="text-right">
                         <b className="text-[14px]">{num(m.total)}</b><span className="text-sub">回</span>

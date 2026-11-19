@@ -224,45 +224,17 @@ async function MonthTab({ today, month }: { today: string; month: string }) {
       <Card title="日別の売上" action={<Legend />}>
         <SalesTrendChart data={trend} height={300} barSize={16} />
       </Card>
-      <div className="grid gap-5 lg:grid-cols-2">
-        <Card title="昼の部・夜の部">
-          <table className="w-full text-[13px]">
-            <thead><tr className="border-b border-line"><Th /><Th className="text-right">男性</Th><Th className="text-right">女性</Th><Th className="text-right">カップル</Th><Th className="text-right">入場料</Th><Th className="text-right">ドリンク</Th><Th className="text-right">売上</Th></tr></thead>
-            <tbody className="tabular-nums">
-              <tr className="border-b border-line"><Td className="font-medium">昼の部</Td><Td className="text-right">{s.maleDay}</Td><Td className="text-right">{s.femaleDay}</Td><Td className="text-right">{s.cpDay}</Td><Td className="text-right">{yen(s.entranceDay)}</Td><Td className="text-right">{yen(s.drinkDay)}</Td><Td className="text-right font-bold">{yen(s.salesDay)}</Td></tr>
-              <tr className="border-b border-line"><Td className="font-medium">夜の部</Td><Td className="text-right">{s.maleNight}</Td><Td className="text-right">{s.femaleNight}</Td><Td className="text-right">{s.cpNight}</Td><Td className="text-right">{yen(s.entranceNight)}</Td><Td className="text-right">{yen(s.drinkNight)}</Td><Td className="text-right font-bold">{yen(s.salesNight)}</Td></tr>
-              <tr><Td className="font-bold">合計</Td><Td className="text-right font-bold">{s.male}</Td><Td className="text-right font-bold">{s.female}</Td><Td className="text-right font-bold">{s.cp}</Td><Td className="text-right font-bold">{yen(s.entrance)}</Td><Td className="text-right font-bold">{yen(s.drinkTotal)}</Td><Td className="text-right font-bold">{yen(s.total)}</Td></tr>
-            </tbody>
-          </table>
-        </Card>
-        <Card title="曜日別の平均">
-          <WeekdayTable rows={data.rows} />
-        </Card>
-      </div>
+      <Card title="昼の部・夜の部">
+        <table className="w-full text-[13px]">
+          <thead><tr className="border-b border-line"><Th /><Th className="text-right">男性</Th><Th className="text-right">女性</Th><Th className="text-right">カップル</Th><Th className="text-right">入場料</Th><Th className="text-right">ドリンク</Th><Th className="text-right">売上</Th></tr></thead>
+          <tbody className="tabular-nums">
+            <tr className="border-b border-line"><Td className="font-medium">昼の部</Td><Td className="text-right">{s.maleDay}</Td><Td className="text-right">{s.femaleDay}</Td><Td className="text-right">{s.cpDay}</Td><Td className="text-right">{yen(s.entranceDay)}</Td><Td className="text-right">{yen(s.drinkDay)}</Td><Td className="text-right font-bold">{yen(s.salesDay)}</Td></tr>
+            <tr className="border-b border-line"><Td className="font-medium">夜の部</Td><Td className="text-right">{s.maleNight}</Td><Td className="text-right">{s.femaleNight}</Td><Td className="text-right">{s.cpNight}</Td><Td className="text-right">{yen(s.entranceNight)}</Td><Td className="text-right">{yen(s.drinkNight)}</Td><Td className="text-right font-bold">{yen(s.salesNight)}</Td></tr>
+            <tr><Td className="font-bold">合計</Td><Td className="text-right font-bold">{s.male}</Td><Td className="text-right font-bold">{s.female}</Td><Td className="text-right font-bold">{s.cp}</Td><Td className="text-right font-bold">{yen(s.entrance)}</Td><Td className="text-right font-bold">{yen(s.drinkTotal)}</Td><Td className="text-right font-bold">{yen(s.total)}</Td></tr>
+          </tbody>
+        </table>
+      </Card>
     </>
-  )
-}
-
-function WeekdayTable({ rows }: { rows: Awaited<ReturnType<typeof dailyRows>> }) {
-  const order = [1, 2, 3, 4, 5, 6, 0]
-  const agg = order.map((w) => {
-    const rs = rows.filter((r) => weekdayOf(r.date) === w)
-    const k = rs.length || 1
-    return { w, people: rs.reduce((a, r) => a + r.people, 0) / k, total: rs.reduce((a, r) => a + r.total, 0) / k }
-  })
-  return (
-    <table className="w-full text-[13px]">
-      <thead><tr className="border-b border-line"><Th>曜日</Th><Th className="text-right">平均人数</Th><Th className="text-right">平均売上</Th></tr></thead>
-      <tbody className="tabular-nums">
-        {agg.map((a) => (
-          <tr key={a.w} className="border-b border-line last:border-0">
-            <Td className={cx('font-medium', a.w === 0 && 'text-up', a.w === 6 && 'text-info')}>{WEEK_JA[a.w]}曜日</Td>
-            <Td className="text-right">{a.people.toFixed(1)}名</Td>
-            <Td className="text-right">{yen(a.total)}</Td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
   )
 }
 
@@ -320,7 +292,7 @@ async function VisitsTab({ today, date }: { today: string; date: string }) {
                   <Td>{v.dayPart}</Td>
                   <Td>{v.dayType}</Td>
                   <Td className="text-right">{yen(v.entranceFee)}</Td>
-                  <Td className="text-right">{v.discount ? <span className="text-up" title={v.discountReason}>−{yen(v.discount)}</span> : '—'}</Td>
+                  <Td className="text-right">{v.discount ? <span className="text-up">−{yen(v.discount)}</span> : '—'}</Td>
                   <Td className="text-right">{v.joinFee + v.annualFee ? yen(v.joinFee + v.annualFee) : '—'}</Td>
                   <Td className="text-right">{r.extra ? yen(r.extra) : '—'}</Td>
                   <Td className="text-right font-bold">{yen(v.entryTotal + r.extra)}</Td>
