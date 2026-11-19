@@ -62,6 +62,8 @@ export default async function MembersPage({ searchParams }: PageProps<'/members'
           ilike(t.members.memberNo, like(q)),
           digits ? ilike(t.members.memberNo, like(digits)) : undefined,
           ...kanaVariants(q).map((v) => ilike(t.members.handleName, like(v))),
+          ...kanaVariants(q).map((v) => ilike(t.members.kana, like(v))),
+          ilike(t.members.realName, like(q)),
         ),
       )
     }

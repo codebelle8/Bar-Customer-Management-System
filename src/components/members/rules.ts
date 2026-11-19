@@ -92,11 +92,21 @@ export function kanaVariants(q: string): string[] {
 export const IMPORT_FIELDS = [
   { key: 'memberNo', label: '会員番号', required: true, aliases: ['会員番号', '会員no', '会員no.', '会員ナンバー', '番号', 'no', 'no.', 'id', '会員id', 'カード番号', 'memberno', 'member_no'] },
   { key: 'handleName', label: 'ハンドルネーム', required: true, aliases: ['ハンドルネーム', 'ハンドル名', 'ハンドル', 'ニックネーム', 'hn', '名前', '呼び名', 'handle', 'handlename', 'name', 'nickname'] },
+  { key: 'kana', label: 'フリガナ', required: false, aliases: ['フリガナ', 'ふりがな', 'カナ', 'よみがな', '読み', 'kana'] },
+  { key: 'realName', label: '本名', required: false, aliases: ['本名', '氏名', '実名', 'realname'] },
   { key: 'gender', label: '性別', required: true, aliases: ['性別', '男女', 'gender', 'sex'] },
   { key: 'birthday', label: '生年月日', required: false, aliases: ['生年月日', '誕生日', '生年', 'birthday', 'birthdate', 'dob'] },
-  { key: 'joinedAt', label: '入会日', required: false, aliases: ['入会日', '入会年月日', '登録日', '入会', 'joined', 'joinedat', 'joindate'] },
-  { key: 'memo', label: 'メモ', required: false, aliases: ['メモ', '備考', '注意事項', 'memo', 'note', 'notes'] },
+  { key: 'joinedAt', label: '入会日', required: false, aliases: ['入会日', '入会年月日', '初回登録日', '登録日', '入会', 'joined', 'joinedat', 'joindate'] },
+  { key: 'memo', label: 'メモ（紹介者・備考）', required: false, aliases: ['メモ', '紹介者備考', '紹介者', '備考', '注意事項', 'memo', 'note', 'notes'] },
+  { key: 'ban', label: '出禁の印', required: false, aliases: ['特典割引', '出禁', '出入禁止'] },
 ] as const
+
+/**
+ * 店舗の会員名簿（会員名簿ハーネス.xls の月別シート）の列の並び。見出しが空欄の列があるため、ボタンで一括して対応付ける
+ *   A 会員番号・B 登録日・C ハンドルネーム・D フリガナ・E 本名・F 生年月日・I 性別・L 特典 割引（出禁の印）・M 紹介者 備考
+ *   H 列（保険証確認・会社・番号）は取り込まない
+ */
+export const ROSTER_PRESET: Record<ImportKey, number> = { memberNo: 0, joinedAt: 1, handleName: 2, kana: 3, realName: 4, birthday: 5, gender: 8, ban: 11, memo: 12 }
 export type ImportKey = (typeof IMPORT_FIELDS)[number]['key']
 
 export const headerKey = (v: unknown) => norm(v).toLowerCase().replace(/[\s_・:：()（）]/g, '')
@@ -118,20 +128,32 @@ export interface ImportRow {
   line: number
   memberNo: string
   handleName: string
+  kana: string
+  realName: string
   gender: string
   birthday: string
   joinedAt: string
   memo: string
+  ban: string
 }
+
+/** 8桁以上の数字の並び（ハイフン・空白区切りを含む）。マイナンバー・保険証・電話番号などを取り込まないため */
+export const LONG_NUMBER = /\d(?:[\s-]?\d){7,}/g
+
+/** 名前・性別がない行（名簿の空き番号・年齢計算用のセルだけの行など）は取り込みの対象にしない */
+export const isBlankRow = (r: ImportRow) => ![r.handleName, r.kana, r.realName, r.gender].some((v) => norm(v))
 
 export interface CheckedRow {
   line: number
   memberNo: string
   handleName: string
+  kana: string
+  realName: string
   gender: '男性' | '女性' | null
   birthday: string | null
   joinedAt: string
   memo: string
+  banned: boolean
   errors: string[]
   warnings: string[]
 }
@@ -155,16 +177,34 @@ export function checkImportRow(r: ImportRow, prefix: string, today: string, join
     else {
       const e = birthdayError(birthday, today)
       if (e) errors.push(e)
+      else if (ageOn(birthday, today) > 100) errors.push(`生年月日「${birthday.replaceAll('-', '/')}」が古すぎます`)
     }
   } else warnings.push('生年月日なし')
   let joinedAt = joinDefault
-  if (norm(r.joinedAt)) {
+  // 名簿の登録日が「2019年」のように年だけの会員は、その年の1月1日で登録して「注意」として一覧に残す
+  const yearOnly = norm(r.joinedAt).match(/^(\d{4})年?$/)
+  if (yearOnly && +yearOnly[1] >= 1990 && `${yearOnly[1]}-01-01` <= today) {
+    joinedAt = `${yearOnly[1]}-01-01`
+    warnings.push('登録日が年のみのため1月1日で登録')
+  } else if (norm(r.joinedAt)) {
     const j = parseDateLoose(r.joinedAt)
     if (!j) errors.push(`入会日「${norm(r.joinedAt)}」を読み取れません`)
     else if (j > today) errors.push('入会日が未来の日付です')
-    else joinedAt = j
+    else if (j < '1990-01-01') errors.push(`入会日「${j.replaceAll('-', '/')}」が古すぎます`)
+    else {
+      joinedAt = j
+      if (birthday && birthday < j && ageOn(birthday, j) < MIN_AGE) warnings.push(`入会日の時点で${MIN_AGE}歳未満`)
+    }
   } else warnings.push('入会日なし（本日で登録）')
-  const memo = norm(r.memo)
+  const kana = norm(r.kana)
+  if (kana.length > 40) errors.push('フリガナは40文字以内')
+  const realName = norm(r.realName)
+  if (realName.length > 40) errors.push('本名は40文字以内')
+  // 備考に書かれた長い番号（マイナンバー・保険証・電話番号など。8桁以上）は保存しない
+  const rawMemo = norm(r.memo)
+  const memo = rawMemo.replace(LONG_NUMBER, '【番号は取り込みません】')
+  if (memo !== rawMemo) warnings.push('備考の長い番号（8桁以上）は取り込みません')
   if (memo.length > 500) errors.push('メモは500文字以内')
-  return { line: r.line, memberNo, handleName, gender, birthday, joinedAt, memo, errors, warnings }
+  const banned = /出禁|出入禁止/.test(norm(r.ban))
+  return { line: r.line, memberNo, handleName, kana, realName, gender, birthday, joinedAt, memo, banned, errors, warnings }
 }

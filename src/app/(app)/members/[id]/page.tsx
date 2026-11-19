@@ -163,7 +163,9 @@ export default async function MemberDetailPage({ params, searchParams }: PagePro
         <Card title="プロフィール">
           <dl className="grid grid-cols-[8.5rem_1fr] gap-x-3 text-[14px] [&>dd]:border-b [&>dd]:border-line [&>dd]:py-2.5 [&>dt]:border-b [&>dt]:border-line [&>dt]:py-2.5">
             <dt className="text-sub">会員番号</dt><dd className="font-bold tabular-nums">{m.memberNo}</dd>
-            <dt className="text-sub">ハンドルネーム</dt><dd className="font-bold">{m.handleName}</dd>
+            <dt className="text-sub">ハンドルネーム</dt>
+            <dd className="font-bold">{m.handleName}{m.kana && <span className="ml-2 text-[12px] font-medium text-sub">{m.kana}</span>}</dd>
+            <dt className="text-sub">本名</dt><dd>{m.realName || <span className="text-mute">—</span>}</dd>
             <dt className="text-sub">性別</dt><dd><span className={m.gender === '男性' ? 'text-info' : 'text-[#c8457e]'}>{m.gender}</span></dd>
             <dt className="text-sub">生年月日</dt>
             <dd>{m.birthday ? <>{fmtDate(m.birthday)}<span className="ml-2 font-bold">{age}歳</span></> : <span className="text-mute">未登録</span>}</dd>
@@ -336,7 +338,7 @@ export default async function MemberDetailPage({ params, searchParams }: PagePro
       <div className="grid gap-5 xl:grid-cols-[1.6fr_1fr]">
         <Card title="会員情報の編集">
           <EditMemberForm
-            m={{ id: m.id, memberNo: m.memberNo, handleName: m.handleName, gender: m.gender, birthday: m.birthday, referral: m.referral, memo: m.memo, idDocs: m.idDocs, feeExpiresAt: m.feeExpiresAt }}
+            m={{ id: m.id, memberNo: m.memberNo, handleName: m.handleName, kana: m.kana, realName: m.realName, gender: m.gender, birthday: m.birthday, referral: m.referral, memo: m.memo, idDocs: m.idDocs, feeExpiresAt: m.feeExpiresAt }}
             isOwner={ctx.isOwner} feeOn={settings.annualFeeEnabled} maxBirthday={maxBirthday} />
         </Card>
         <Card title="ステータス" className="order-first self-start xl:order-none">

@@ -2,15 +2,28 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CircleAlert, CircleCheck, FileSpreadsheet, LoaderCircle, RotateCcw, TriangleAlert, Upload } from 'lucide-react'
+import { CircleAlert, CircleCheck, Download, FileSpreadsheet, LoaderCircle, RotateCcw, TriangleAlert, Upload, Wand2 } from 'lucide-react'
 import { findExistingNumbers, importMembers, type ImportResult } from '@/app/(app)/members/actions'
 import { Badge, Button, Card, Select, Td, Th, buttonCls, cx } from '@/components/ui'
 import { ageOn } from '@/lib/format'
-import { IMPORT_FIELDS, checkImportRow, detectColumns, norm, parseDateLoose, type CheckedRow, type ImportKey, type ImportRow } from './rules'
+import { IMPORT_FIELDS, ROSTER_PRESET, checkImportRow, detectColumns, isBlankRow, norm, parseDateLoose, type CheckedRow, type ImportKey, type ImportRow } from './rules'
 
 type Mapping = Record<ImportKey, number>
 const NONE = -1
 const CHUNK = 100
+/** 読み込む列の上限（名簿のシートは右側に空の列が数千列あるため、左から60列だけ読む） */
+const MAX_COLS = 60
+/** 問題の内容から個別の値（「…」）を除いて、種類ごとに数える */
+const reasonKind = (s: string) => s.replace(/「[^」]*」/g, '')
+
+/** 既定のシート：「2026.11」のような年.月の名前なら一番新しい月、なければ先頭 */
+function defaultSheet(names: string[]) {
+  const ym = names
+    .map((n) => ({ n, m: n.trim().match(/^(\d{4})\.(\d{1,2})$/) }))
+    .filter((x) => x.m)
+    .sort((a, b) => +b.m![1] * 100 + +b.m![2] - (+a.m![1] * 100 + +a.m![2]))
+  return ym[0]?.n ?? names[0]
+}
 const colName = (i: number) => {
   let s = ''
   for (let n = i + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s
@@ -29,6 +42,7 @@ function cellText(v: unknown, asDate: boolean): string {
 
 interface Sheet {
   fileName: string
+  sheetName: string
   rows: unknown[][]
   /** シート上の先頭行の行番号（1始まり） */
   firstLine: number
@@ -44,16 +58,47 @@ export function ImportClient({ prefix, todayJst, joinDefault, storeName }: { pre
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
   const [result, setResult] = useState<(ImportResult & { failed?: string }) | null>(null)
   const [drag, setDrag] = useState(false)
+  const [sheetNames, setSheetNames] = useState<string[]>([])
+  const [loading, setLoading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const bookRef = useRef<{ name: string; buf: ArrayBuffer } | null>(null)
+
+  /** 1 シート分の行を取り出し、見出し行と列の対応を推定する */
+  function loadRows(XLSX: typeof import('xlsx'), ws: import('xlsx').WorkSheet | undefined, fileName: string, sheetName: string) {
+    if (!ws || !ws['!ref']) throw new Error('シートが空です')
+    const ref = XLSX.utils.decode_range(ws['!ref'])
+    const first = ref.s.r
+    const range = { s: { r: ref.s.r, c: 0 }, e: { r: ref.e.r, c: Math.min(ref.e.c, MAX_COLS - 1) } }
+    const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, raw: true, defval: '', blankrows: true, range })
+    if (!rows.some((r) => r.some((c) => norm(c)))) throw new Error('データがありません')
+    // 見出し行を探す（先頭10行のうち、項目名が最も多く見つかった行）
+    let headerIdx = -1
+    let best = 1
+    rows.slice(0, 10).forEach((r, i) => {
+      const n = Object.keys(detectColumns(r)).length
+      if (n > best) {
+        best = n
+        headerIdx = i
+      }
+    })
+    const detected = headerIdx >= 0 ? detectColumns(rows[headerIdx]) : {}
+    const m = Object.fromEntries(
+      IMPORT_FIELDS.map((f, i) => [f.key, detected[f.key] ?? (headerIdx < 0 ? i : NONE)]),
+    ) as Mapping
+    setSheet({ fileName, sheetName, rows, firstLine: first + 1, headerIdx })
+    setMapping(m)
+  }
 
   async function readFile(file: File) {
     setParseError('')
     setResult(null)
     setExisting(null)
+    setSheetNames([])
+    bookRef.current = null
+    setLoading(true)
     try {
       const XLSX = await import('xlsx')
       const buf = await file.arrayBuffer()
-      let wb
       if (/\.(csv|txt)$/i.test(file.name)) {
         // CSV は UTF-8 / Shift_JIS（Excel の既定）の両方に対応
         let text: string
@@ -62,49 +107,61 @@ export function ImportClient({ prefix, todayJst, joinDefault, storeName }: { pre
         } catch {
           text = new TextDecoder('shift_jis').decode(buf)
         }
-        wb = XLSX.read(text.replace(/^﻿/, ''), { type: 'string', raw: true })
+        const wb = XLSX.read(text.replace(/^\uFEFF/, ''), { type: 'string', raw: true })
+        loadRows(XLSX, wb.Sheets[wb.SheetNames[0]], file.name, wb.SheetNames[0])
       } else {
-        wb = XLSX.read(buf, { type: 'array' })
+        // シートが多い名簿でも重くならないよう、シート名だけ先に読み、選んだシートだけを読み込む
+        const names = XLSX.read(buf, { type: 'array', bookSheets: true }).SheetNames
+        if (!names.length) throw new Error('シートがありません')
+        bookRef.current = { name: file.name, buf }
+        setSheetNames(names)
+        const name = defaultSheet(names)
+        const wb = XLSX.read(buf, { type: 'array', sheets: name, dense: true })
+        loadRows(XLSX, wb.Sheets[name], file.name, name)
       }
-      const ws = wb.Sheets[wb.SheetNames[0]]
-      if (!ws || !ws['!ref']) throw new Error('シートが空です')
-      const first = XLSX.utils.decode_range(ws['!ref']).s.r
-      const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, raw: true, defval: '', blankrows: true })
-      if (!rows.some((r) => r.some((c) => norm(c)))) throw new Error('データがありません')
-      // 見出し行を探す（先頭10行のうち、項目名が最も多く見つかった行）
-      let headerIdx = -1
-      let best = 1
-      rows.slice(0, 10).forEach((r, i) => {
-        const n = Object.keys(detectColumns(r)).length
-        if (n > best) {
-          best = n
-          headerIdx = i
-        }
-      })
-      const detected = headerIdx >= 0 ? detectColumns(rows[headerIdx]) : {}
-      const m = Object.fromEntries(
-        IMPORT_FIELDS.map((f, i) => [f.key, detected[f.key] ?? (headerIdx < 0 ? i : NONE)]),
-      ) as Mapping
-      setSheet({ fileName: file.name, rows, firstLine: first + 1, headerIdx })
-      setMapping(m)
     } catch (e) {
       setSheet(null)
       setMapping(null)
       setParseError(`ファイルを読み込めませんでした：${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function changeSheet(name: string) {
+    const book = bookRef.current
+    if (!book) return
+    setLoading(true)
+    setExisting(null)
+    try {
+      const XLSX = await import('xlsx')
+      const wb = XLSX.read(book.buf, { type: 'array', sheets: name, dense: true })
+      loadRows(XLSX, wb.Sheets[name], book.name, name)
+      setParseError('')
+    } catch (e) {
+      setParseError(`シート「${name}」を読み込めませんでした：${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setLoading(false)
     }
   }
 
   // 列の対応に従って 1 行ずつチェック
-  const checked = useMemo<CheckedRow[]>(() => {
-    if (!sheet || !mapping) return []
+  const { checked, blank } = useMemo<{ checked: CheckedRow[]; blank: number }>(() => {
+    if (!sheet || !mapping) return { checked: [], blank: 0 }
     const get = (r: unknown[], k: ImportKey, asDate = false) => (mapping[k] >= 0 ? cellText(r[mapping[k]], asDate) : '')
     const out: CheckedRow[] = []
+    let blank = 0
     sheet.rows.forEach((r, i) => {
       if (i <= sheet.headerIdx || !r.some((c) => norm(c))) return
       const raw: ImportRow = {
         line: sheet.firstLine + i,
-        memberNo: get(r, 'memberNo'), handleName: get(r, 'handleName'), gender: get(r, 'gender'),
-        birthday: get(r, 'birthday', true), joinedAt: get(r, 'joinedAt', true), memo: get(r, 'memo'),
+        memberNo: get(r, 'memberNo'), handleName: get(r, 'handleName'), kana: get(r, 'kana'), realName: get(r, 'realName'), gender: get(r, 'gender'),
+        birthday: get(r, 'birthday', true), joinedAt: get(r, 'joinedAt', true), memo: get(r, 'memo'), ban: get(r, 'ban'),
+      }
+      // 番号だけの行（名簿の空き番号）や、計算用のセルだけの行は対象にしない
+      if (isBlankRow(raw)) {
+        blank++
+        return
       }
       out.push(checkImportRow(raw, prefix, todayJst, joinDefault))
     })
@@ -112,7 +169,7 @@ export function ImportClient({ prefix, todayJst, joinDefault, storeName }: { pre
     const count = new Map<string, number>()
     for (const c of out) if (c.memberNo) count.set(c.memberNo, (count.get(c.memberNo) ?? 0) + 1)
     for (const c of out) if (c.memberNo && (count.get(c.memberNo) ?? 0) > 1) c.errors.push('ファイル内で会員番号が重複')
-    return out
+    return { checked: out, blank }
   }, [sheet, mapping, prefix, todayJst, joinDefault])
 
   // 登録済みの番号を確認
@@ -137,11 +194,45 @@ export function ImportClient({ prefix, todayJst, joinDefault, storeName }: { pre
   const errRows = rows.length - okRows.length
   const warnRows = okRows.filter((r) => r.warnings.length).length
   const missingRequired = mapping ? IMPORT_FIELDS.filter((f) => f.required && mapping[f.key] < 0) : []
+  const bannedRows = okRows.filter((r) => r.banned).length
+  // 問題の種類ごとの件数（エラー＝取り込まない、注意＝取り込む）
+  const reasons = useMemo(() => {
+    const m = new Map<string, { kind: 'error' | 'warning'; n: number }>()
+    for (const r of rows) {
+      for (const e of r.errors) {
+        const k = reasonKind(e)
+        m.set(k, { kind: 'error', n: (m.get(k)?.n ?? 0) + 1 })
+      }
+      if (!r.errors.length) {
+        for (const w of r.warnings) {
+          const k = reasonKind(w)
+          m.set(k, { kind: 'warning', n: (m.get(k)?.n ?? 0) + 1 })
+        }
+      }
+    }
+    return [...m.entries()].map(([label, v]) => ({ label, ...v })).sort((a, b) => Number(a.kind === 'warning') - Number(b.kind === 'warning') || b.n - a.n)
+  }, [rows])
+
+  /** 問題のある行の一覧を Excel で保存（名簿を直して取り込み直すため） */
+  async function downloadProblems() {
+    const XLSX = await import('xlsx')
+    const list = rows.filter((r) => r.errors.length || r.warnings.length)
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['行', '判定', '会員番号', 'ハンドルネーム', '内容'],
+      ...list.map((r) => [r.line, r.errors.length ? 'エラー（取り込まない）' : '注意（取り込む）', r.memberNo, r.handleName, (r.errors.length ? r.errors : r.warnings).join('・')]),
+    ])
+    ws['!cols'] = [{ wch: 8 }, { wch: 20 }, { wch: 12 }, { wch: 18 }, { wch: 60 }]
+    ws['!autofilter'] = { ref: ws['!ref'] ?? 'A1' }
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, '確認が必要な行')
+    XLSX.writeFile(wb, `取込チェック_${sheet?.sheetName ?? ''}_${todayJst.replaceAll('-', '')}.xlsx`)
+  }
 
   async function runImport() {
     if (!okRows.length) return
     const payload: ImportRow[] = okRows.map((r) => ({
-      line: r.line, memberNo: r.memberNo, handleName: r.handleName, gender: r.gender ?? '', birthday: r.birthday ?? '', joinedAt: r.joinedAt, memo: r.memo,
+      line: r.line, memberNo: r.memberNo, handleName: r.handleName, kana: r.kana, realName: r.realName, gender: r.gender ?? '', birthday: r.birthday ?? '',
+      joinedAt: r.joinedAt, memo: r.memo, ban: r.banned ? '出禁' : '',
     }))
     const agg: ImportResult & { failed?: string } = { inserted: 0, skipped: [] }
     setProgress({ done: 0, total: payload.length })
@@ -167,6 +258,8 @@ export function ImportClient({ prefix, todayJst, joinDefault, storeName }: { pre
     setMapping(null)
     setResult(null)
     setExisting(null)
+    setSheetNames([])
+    bookRef.current = null
     if (fileRef.current) fileRef.current.value = ''
   }
 
@@ -174,18 +267,21 @@ export function ImportClient({ prefix, todayJst, joinDefault, storeName }: { pre
     const XLSX = await import('xlsx')
     const ws = XLSX.utils.aoa_to_sheet([
       IMPORT_FIELDS.map((f) => f.label),
-      ['10001', 'タカ', '男性', '1985/04/12', '2023/05/20', '番号で呼ぶこと'],
-      ['10002', 'ミキ', '女性', '1992/11/03', '2024/01/08', ''],
+      ['10001', 'タカ', 'タカ', '', '男性', '1985/04/12', '2023/05/20', '番号で呼ぶこと', ''],
+      ['10002', 'ミキ', 'ミキ', '', '女性', '1992/11/03', '2024/01/08', '', ''],
     ])
-    ws['!cols'] = [{ wch: 12 }, { wch: 18 }, { wch: 8 }, { wch: 14 }, { wch: 14 }, { wch: 30 }]
+    ws['!cols'] = [{ wch: 12 }, { wch: 18 }, { wch: 14 }, { wch: 14 }, { wch: 8 }, { wch: 14 }, { wch: 14 }, { wch: 30 }, { wch: 10 }]
     const help = XLSX.utils.aoa_to_sheet([
       ['項目', '必須', '書き方'],
       ['会員番号', '必須', `紙の会員カードの番号。数字だけでも可（自動で「${prefix}」が付きます）`],
       ['ハンドルネーム', '必須', '受付で呼ぶお名前（40文字以内）'],
+      ['フリガナ', '', 'ハンドルネームの読み（検索に使います）'],
+      ['本名', '', '40文字以内'],
       ['性別', '必須', '男性／女性（男・女、M・F でも可）'],
       ['生年月日', '', '1985/04/12 の形式（和暦 S60.4.12 も可）。20歳未満は登録できません'],
       ['入会日', '', '空欄の場合は取込日になります'],
-      ['メモ', '', 'スタッフ間の申し送り（500文字以内）'],
+      ['メモ（紹介者・備考）', '', 'スタッフ間の申し送り・紹介者など（500文字以内）'],
+      ['出禁の印', '', '「出禁」と書かれた会員は出入禁止として登録します'],
       [],
       ['※ サンプル行（10001・10002）は消してからご記入ください。1行目の項目名は変えないでください。'],
     ])
@@ -251,14 +347,23 @@ export function ImportClient({ prefix, todayJst, joinDefault, storeName }: { pre
               drag ? 'border-brand bg-brand-soft' : 'border-brand-light/70 bg-[#fbf9fe] hover:border-brand hover:bg-brand-soft/60')}
           >
             <Upload className="size-8 text-brand" />
-            <span className="text-[15px] font-bold">{sheet ? sheet.fileName : 'Excel（.xlsx）または CSV ファイルを選択'}</span>
-            <span className="text-[12px] text-sub">{sheet ? `${rows.length}行を読み込みました・別のファイルを選ぶ場合はクリック` : 'ここにドラッグ＆ドロップしても読み込めます'}</span>
+            <span className="text-[15px] font-bold">{loading ? '読み込み中…' : sheet ? sheet.fileName : 'Excel（.xlsx / .xls）または CSV ファイルを選択'}</span>
+            <span className="text-[12px] text-sub">{sheet ? `「${sheet.sheetName}」の${rows.length}行を読み込みました・別のファイルを選ぶ場合はクリック` : 'ここにドラッグ＆ドロップしても読み込めます'}</span>
             <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="sr-only"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) readFile(f) }} />
           </label>
+          {sheetNames.length > 1 && (
+            <label className="mt-3 flex items-center gap-3">
+              <span className="shrink-0 text-[13px] font-medium text-sub">読み込むシート</span>
+              <Select value={sheet?.sheetName ?? ''} disabled={loading} onChange={(e) => changeSheet(e.target.value)} data-testid="import-sheet">
+                {sheetNames.map((n) => <option key={n} value={n}>{n}</option>)}
+              </Select>
+            </label>
+          )}
           {parseError && <p role="alert" className="mt-3 rounded-lg bg-[#fde7eb] px-3 py-2 text-[13px] text-up">{parseError}</p>}
           <p className="mt-3 text-[12px] leading-relaxed text-sub">
-            1行目に「会員番号・ハンドルネーム・性別・生年月日・入会日・メモ」の見出しがあれば自動で対応付けます。
+            1行目に「会員番号・ハンドルネーム・性別・生年月日・入会日・メモ」などの見出しがあれば自動で対応付けます。
+            店舗の会員名簿（.xls）は、シートを選んで「店舗の会員名簿の並びに合わせる」を押してください（保険証の番号の列は取り込みません）。
             ファイルの内容はこの端末の中で読み取り、確認後に取り込む行だけを送信します。
           </p>
         </Card>
@@ -269,7 +374,8 @@ export function ImportClient({ prefix, todayJst, joinDefault, storeName }: { pre
       </div>
 
       {sheet && mapping && (
-        <Card title="2. 列の対応を確認">
+        <Card title="2. 列の対応を確認"
+          action={<Button size="sm" variant="soft" data-testid="roster-preset" onClick={() => setMapping(Object.fromEntries(IMPORT_FIELDS.map((f) => [f.key, ROSTER_PRESET[f.key] < width ? ROSTER_PRESET[f.key] : NONE])) as Mapping)}><Wand2 className="size-3.5" />店舗の会員名簿の並びに合わせる</Button>}>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {IMPORT_FIELDS.map((f) => (
               <label key={f.key} className="block">
@@ -295,16 +401,28 @@ export function ImportClient({ prefix, todayJst, joinDefault, storeName }: { pre
             <span className="flex items-center gap-1.5 text-[14px]"><CircleCheck className="size-4 text-ok" />取込できる行 <b className="text-[18px] text-ok tabular-nums">{okRows.length}</b>件</span>
             <span className="flex items-center gap-1.5 text-[14px]"><CircleAlert className="size-4 text-up" />エラー <b className="text-[18px] text-up tabular-nums">{errRows}</b>件</span>
             {warnRows > 0 && <span className="flex items-center gap-1.5 text-[13px] text-[#b7791f]"><TriangleAlert className="size-4" />注意 {warnRows}件（取込可）</span>}
+            {bannedRows > 0 && <span className="text-[13px] text-sub">うち出禁 <b className="text-up tabular-nums">{bannedRows}</b>件</span>}
+            {blank > 0 && <span className="text-[12px] text-sub">番号だけの行（空き番号など）{blank}件は対象外</span>}
             {!existing && rows.length > 0 && <span className="flex items-center gap-1.5 text-[12px] text-sub"><LoaderCircle className="size-3.5 animate-spin" />登録済みの番号を確認中…</span>}
             <label className="ml-auto flex cursor-pointer items-center gap-2 text-[13px] text-sub">
               <input type="checkbox" checked={onlyErrors} onChange={(e) => setOnlyErrors(e.target.checked)} className="size-4 accent-[#6d35c9]" />エラーの行だけ表示
             </label>
           </div>
+          {reasons.length > 0 && (
+            <div className="flex flex-wrap items-start gap-x-6 gap-y-2 border-b border-line bg-[#fffaf5] px-5 py-3" data-testid="import-reasons">
+              <ul className="flex flex-wrap gap-x-5 gap-y-1 text-[12px]">
+                {reasons.map((r) => (
+                  <li key={r.label} className={r.kind === 'error' ? 'text-up' : 'text-[#b7791f]'}>{r.label} <b className="tabular-nums">{r.n}</b>件</li>
+                ))}
+              </ul>
+              <Button size="sm" className="ml-auto" onClick={downloadProblems} data-testid="import-problems"><Download className="size-3.5" />確認が必要な行をExcelで保存</Button>
+            </div>
+          )}
           {shown.length ? (
             <div className="max-h-[520px] overflow-auto">
               <table className="w-full text-[13px]">
                 <thead className="sticky top-0 z-10 bg-[#f8f6fc]">
-                  <tr><Th>行</Th><Th>判定</Th><Th>会員番号</Th><Th>ハンドルネーム</Th><Th>性別</Th><Th>生年月日</Th><Th>入会日</Th><Th>メモ</Th><Th>内容</Th></tr>
+                  <tr><Th>行</Th><Th>判定</Th><Th>会員番号</Th><Th>ハンドルネーム</Th><Th>本名</Th><Th>性別</Th><Th>生年月日</Th><Th>入会日</Th><Th>メモ</Th><Th>内容</Th></tr>
                 </thead>
                 <tbody className="tabular-nums">
                   {shown.slice(0, 1000).map((r) => (
@@ -312,7 +430,11 @@ export function ImportClient({ prefix, todayJst, joinDefault, storeName }: { pre
                       <Td className="text-sub">{r.line}</Td>
                       <Td>{r.errors.length ? <Badge tone="red">エラー</Badge> : r.warnings.length ? <Badge tone="amber">注意</Badge> : <Badge tone="green">OK</Badge>}</Td>
                       <Td className="font-bold">{r.memberNo || <span className="text-mute">—</span>}</Td>
-                      <Td className="max-w-40 truncate">{r.handleName || <span className="text-mute">—</span>}</Td>
+                      <Td className="max-w-40 truncate">
+                        {r.handleName || <span className="text-mute">—</span>}{r.banned && <Badge tone="red" className="ml-1.5">出禁</Badge>}
+                        {r.kana && <span className="block text-[11px] text-sub">{r.kana}</span>}
+                      </Td>
+                      <Td className="max-w-32 truncate">{r.realName || <span className="text-mute">—</span>}</Td>
                       <Td>{r.gender ?? <span className="text-mute">—</span>}</Td>
                       <Td>{r.birthday ? <>{r.birthday.replaceAll('-', '/')}<span className="ml-1 text-[11px] text-sub">{ageOn(r.birthday, todayJst)}歳</span></> : <span className="text-mute">—</span>}</Td>
                       <Td>{r.joinedAt.replaceAll('-', '/')}</Td>

@@ -83,6 +83,8 @@ export async function searchMembers(tx: Tx, storeId: string, rawQ: string, limit
     return or(
       ilike(t.members.memberNo, `%${escapeLike(tok)}%`),
       ...variants.map((v) => ilike(t.members.handleName, `%${escapeLike(v)}%`)),
+      ...variants.map((v) => ilike(t.members.kana, `%${escapeLike(v)}%`)),
+      ilike(t.members.realName, `%${escapeLike(tok)}%`),
     )
   })
   const rows = await tx.select().from(t.members).where(and(eq(t.members.storeId, storeId), ...conds)).limit(200)

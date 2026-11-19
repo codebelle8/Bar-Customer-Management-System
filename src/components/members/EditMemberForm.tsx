@@ -11,6 +11,8 @@ export interface EditableMember {
   id: string
   memberNo: string
   handleName: string
+  kana: string
+  realName: string
   gender: '男性' | '女性'
   birthday: string | null
   referral: string
@@ -49,6 +51,14 @@ export function EditMemberForm({ m, isOwner, feeOn, maxBirthday }: { m: Editable
         <Field label="ハンドルネーム" required>
           <Input name="handleName" defaultValue={m.handleName} required maxLength={40} />
           <FieldError msg={e.handleName} />
+        </Field>
+        <Field label="フリガナ" hint="ハンドルネームの読み（検索に使います）">
+          <Input name="kana" defaultValue={m.kana} maxLength={40} />
+          <FieldError msg={e.kana} />
+        </Field>
+        <Field label="本名">
+          <Input name="realName" defaultValue={m.realName} maxLength={40} />
+          <FieldError msg={e.realName} />
         </Field>
         <Field label="性別" required>
           <div className="grid grid-cols-2 gap-2">

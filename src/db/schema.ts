@@ -82,6 +82,10 @@ export const members = pgTable('members', {
   storeId: text('store_id').notNull().references(() => stores.id),
   memberNo: text('member_no').notNull(),
   handleName: text('handle_name').notNull(),
+  /** フリガナ（ハンドルネームの読み。名簿から移行） */
+  kana: text('kana').notNull().default(''),
+  /** 本名（名簿から移行） */
+  realName: text('real_name').notNull().default(''),
   gender: text('gender').$type<'男性' | '女性'>().notNull(),
   birthday: date('birthday', { mode: 'string' }),
   joinedAt: date('joined_at', { mode: 'string' }).notNull(),

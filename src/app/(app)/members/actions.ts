@@ -138,10 +138,15 @@ export async function updateMember(_prev: FormState, fd: FormData): Promise<Form
   const id = str(fd, 'id')
   if (!UUID.test(id)) return { error: '会員が見つかりません' }
   const parsed = baseSchema
-    .extend({ feeExpiresAt: z.string().trim() })
+    .extend({
+      feeExpiresAt: z.string().trim(),
+      kana: z.string().trim().max(40, 'フリガナは40文字以内で入力してください'),
+      realName: z.string().trim().max(40, '本名は40文字以内で入力してください'),
+    })
     .safeParse({
       handleName: str(fd, 'handleName'), gender: str(fd, 'gender'), birthday: str(fd, 'birthday'), referral: str(fd, 'referral'),
       memo: str(fd, 'memo'), idDocs: fd.getAll('idDocs').map(String), feeExpiresAt: str(fd, 'feeExpiresAt'),
+      kana: str(fd, 'kana').normalize('NFKC'), realName: str(fd, 'realName').normalize('NFKC'),
     })
   const errors = parsed.success ? {} : issuesToErrors(parsed.error.issues)
   const birthday = checkBirthday(str(fd, 'birthday').trim(), false, errors)
@@ -165,7 +170,7 @@ export async function updateMember(_prev: FormState, fd: FormData): Promise<Form
       const [s] = await tx.select({ fee: t.storeSettings.annualFeeEnabled }).from(t.storeSettings).where(eq(t.storeSettings.storeId, ctx.storeId))
       const next = {
         memberNo: wantsNo ? memberNo : m.memberNo,
-        handleName: v.handleName, gender: v.gender, birthday, referral: v.referral, memo: v.memo, idDocs: v.idDocs,
+        handleName: v.handleName, kana: v.kana, realName: v.realName, gender: v.gender, birthday, referral: v.referral, memo: v.memo, idDocs: v.idDocs,
         feeExpiresAt: s?.fee ? feeExpiresAt : m.feeExpiresAt,
       }
       if (next.memberNo !== m.memberNo) {
@@ -173,7 +178,7 @@ export async function updateMember(_prev: FormState, fd: FormData): Promise<Form
         if (dup) return { errors: { memberNo: `会員番号 ${next.memberNo} は既に使われています（${dup.handleName}）` }, error: '入力内容を確認してください' } as FormState
       }
       const LABELS: Record<keyof typeof next, string> = {
-        memberNo: '会員番号', handleName: 'ハンドルネーム', gender: '性別', birthday: '生年月日', referral: '紹介元', memo: 'メモ', idDocs: '本人確認書類', feeExpiresAt: '年会費期限',
+        memberNo: '会員番号', handleName: 'ハンドルネーム', kana: 'フリガナ', realName: '本名', gender: '性別', birthday: '生年月日', referral: '紹介元', memo: 'メモ', idDocs: '本人確認書類', feeExpiresAt: '年会費期限',
       }
       const changed = (Object.keys(next) as (keyof typeof next)[]).filter((k) => JSON.stringify(next[k]) !== JSON.stringify(m[k]))
       if (!changed.length) return { ok: true } as FormState
@@ -244,7 +249,7 @@ export async function setMemberStatus(_prev: FormState, fd: FormData): Promise<F
 /** 取込前の確認：すでに登録されている会員番号を返す */
 export async function findExistingNumbers(nos: string[]): Promise<string[]> {
   const ctx = await requireCtx()
-  const list = z.array(z.string().max(40)).max(10000).parse(nos)
+  const list = z.array(z.string().max(40)).max(30000).parse(nos)
   if (!list.length) return []
   return query(async (tx) => {
     const found: string[] = []
@@ -263,10 +268,13 @@ const importRowSchema = z.object({
   line: z.number().int().min(1),
   memberNo: z.string().max(60),
   handleName: z.string().max(200),
+  kana: z.string().max(200),
+  realName: z.string().max(200),
   gender: z.string().max(20),
   birthday: z.string().max(40),
   joinedAt: z.string().max(40),
   memo: z.string().max(2000),
+  ban: z.string().max(200),
 })
 
 export interface ImportResult {
@@ -311,14 +319,17 @@ export async function importMembers(rowsIn: ImportRow[]): Promise<ImportResult> 
     if (!toInsert.length) return 0
     await tx.insert(t.members).values(
       toInsert.map((v) => ({
-        storeId: ctx.storeId, memberNo: v.memberNo, handleName: v.handleName, gender: v.gender!, birthday: v.birthday, joinedAt: v.joinedAt,
+        storeId: ctx.storeId, memberNo: v.memberNo, handleName: v.handleName, kana: v.kana, realName: v.realName, gender: v.gender!, birthday: v.birthday, joinedAt: v.joinedAt,
         memo: v.memo, termsVersion: '紙', termsSignedAt: new Date(`${v.joinedAt}T12:00:00+09:00`), createdBy: ctx.user.id,
+        // 名簿の「特典 割引」欄に出禁の印がある会員は出入禁止で登録する
+        ...(v.banned ? { status: 'banned' as const, banReason: '会員名簿で出禁', bannedAt: new Date() } : {}),
       })),
     )
     await bumpNextNo(tx, ctx, toInsert.map((v) => v.memberNo))
     const first = toInsert[0].memberNo
     const last = toInsert[toInsert.length - 1].memberNo
-    await audit(tx, ctx, '会員一括取込', `${toInsert.length}件（${first}${toInsert.length > 1 ? `〜${last}` : ''}）`)
+    const bannedN = toInsert.filter((v) => v.banned).length
+    await audit(tx, ctx, '会員一括取込', `${toInsert.length}件（${first}${toInsert.length > 1 ? `〜${last}` : ''}）${bannedN ? `・うち出禁${bannedN}件` : ''}`)
     return toInsert.length
   }, ctx)
   if (inserted) revalidatePath('/members')
