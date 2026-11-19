@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { eq } from 'drizzle-orm'
-import { Database, Info, Lock, MapPin, ShieldCheck } from 'lucide-react'
+import { Info, Lock, MapPin, ShieldCheck } from 'lucide-react'
 import { Badge, Card, Field } from '@/components/ui'
 import { ActionForm, SubmitButton } from '@/components/settings/form'
 import { NoteBox, Switch, Tabs, YenInput } from '@/components/settings/fields'
@@ -68,10 +68,6 @@ export default async function SettingsPage({ searchParams }: PageProps<'/setting
               <li className="flex gap-3">
                 <Lock className="mt-0.5 size-5 shrink-0 text-brand" />
                 <span><b>アクセス制御</b><br />データベース側で店舗ごとに制御しており、店舗オーナー・スタッフは所属店舗のデータしか読み書きできません。</span>
-              </li>
-              <li className="flex gap-3">
-                <Database className="mt-0.5 size-5 shrink-0 text-brand" />
-                <span><b>バックアップ</b><br />データベースは自動でバックアップされています。</span>
               </li>
               <li className="flex gap-3">
                 <ShieldCheck className="mt-0.5 size-5 shrink-0 text-brand" />

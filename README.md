@@ -78,7 +78,7 @@ npm run dev                  # http://localhost:3000
 ## 本番環境（想定）
 
 - アプリ：Vercel（東京リージョン `hnd1`、`vercel.json` で指定済み）
-- データベース：Supabase（東京リージョン `ap-northeast-1`）。自動バックアップあり
+- データベース：Supabase（東京リージョン `ap-northeast-1`）
 - 開発用の組み込み DB（PGlite）はサーバーレス環境では使えないため、本番では `DATABASE_URL` が必須です
 
 環境変数：

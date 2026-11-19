@@ -151,7 +151,7 @@ export function NewMemberWizard(p: WizardProps) {
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <Link href="/print/terms" target="_blank" className={buttonCls('outline', 'lg')}><Printer className="size-4" />規約用紙を印刷</Link>
-            <span className="text-[12px] text-sub">太字・下線の項目は特にご説明ください。電子署名は12月以降に対応予定です。</span>
+            <span className="text-[12px] text-sub">太字・下線の項目は特にご説明ください。</span>
           </div>
           <div className="mt-4">
             <CheckTile checked={signed} onChange={setSigned} required testId="terms-signed" sub="お客様に規約を説明し、紙の規約用紙に署名をいただいたことを確認します">
