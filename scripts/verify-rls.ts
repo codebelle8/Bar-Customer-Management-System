@@ -133,10 +133,17 @@ async function main() {
   const soDelete = await withRls({ role: storeOwner.role, storeId: storeOwner.storeId, userId: storeOwner.id }, (tx) => tx.delete(t.attendance).where(eq(t.attendance.id, punched[0].id)).returning())
   check('店舗オーナーは自店舗の勤怠の記録を削除できる', soDelete.length === 1)
 
-  // 8. app_user ロールで RLS が有効になっていること
-  const flags = await db.execute(sql`select relname, relrowsecurity from pg_class where relname in ('members','visits','visit_items','expenses','users','price_rules','staff_members','attendance')`)
+  // 8. レジ金：他店舗の確認・メモは見えない／書き込めない
+  const cashSeen = await withRls(as(fresh), async (tx) => ({ checks: (await tx.select().from(t.cashChecks)).length, notes: (await tx.select().from(t.cashNotes)).length }))
+  const [harnesCheck] = await db.select().from(t.cashChecks).where(eq(t.cashChecks.storeId, HARNES)).limit(1)
+  check('新店スタッフはハーネスのレジ金の確認・メモを参照できない', !!harnesCheck && cashSeen.checks === 0 && cashSeen.notes === 0, JSON.stringify(cashSeen))
+  check('他店舗のレジ金の確認は記録できない', await denied(() => withRls(as(fresh), (tx) =>
+    tx.insert(t.cashChecks).values({ storeId: HARNES, businessDate: '2026-11-01', item: 'open_cash', staffMemberId: harnesStaffMember.id }).returning())))
+
+  // 9. app_user ロールで RLS が有効になっていること
+  const flags = await db.execute(sql`select relname, relrowsecurity from pg_class where relname in ('members','visits','visit_items','expenses','users','price_rules','staff_members','attendance','cash_checks','cash_notes')`)
   const rows = (Array.isArray(flags) ? flags : (flags as unknown as { rows: { relname: string; relrowsecurity: boolean }[] }).rows) as { relname: string; relrowsecurity: boolean }[]
-  check('主要テーブルで Row Level Security が有効', rows.length === 8 && rows.every((r) => r.relrowsecurity), rows.map((r) => r.relname).join(','))
+  check('主要テーブルで Row Level Security が有効', rows.length === 10 && rows.every((r) => r.relrowsecurity), rows.map((r) => r.relname).join(','))
 }
 
 main()

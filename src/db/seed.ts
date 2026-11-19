@@ -337,6 +337,7 @@ async function seedDemo(db: DB) {
   )
   await db.insert(t.auditLogs).values({ storeId: HARNES, userId: owner.id, userName: owner.name, action: 'デモデータ作成', target: `会員 ${members.length}名・来店 ${visits.length}件` })
   await seedAttendanceDemo(db)
+  await seedCashDemo(db)
 }
 
 /**
@@ -377,4 +378,37 @@ export async function seedAttendanceDemo(db: DB) {
   }
   await chunked(rows, 300, (part) => db.insert(t.attendance).values(part))
   return { added: rows.length }
+}
+
+/**
+ * レジ金の確認のデモデータ（ハーネス）：2026-10-01 から前日までの確認者（勤怠のデモの対象者から）と引継ぎメモ。
+ * 記録済みの場合は何もしない（確認用 DB への追加にも使う）
+ */
+export async function seedCashDemo(db: DB) {
+  const [{ n }] = await db.select({ n: count() }).from(t.cashChecks).where(eq(t.cashChecks.storeId, HARNES))
+  if (n > 0) return { checks: 0, notes: 0 }
+  const staff = await db.select().from(t.staffMembers).where(eq(t.staffMembers.storeId, HARNES))
+  if (!staff.length) return { checks: 0, notes: 0 }
+  const rand = rng(20261120)
+  const pick = <T,>(a: T[]) => a[Math.floor(rand() * a.length)]
+  const [settings] = await db.select().from(t.storeSettings).where(eq(t.storeSettings.storeId, HARNES))
+  const today = businessDateOf(new Date(), settings)
+  const items: [string, number][] = [
+    ['open_cash', 12 * 60 + 50], ['open_gift', 12 * 60 + 52],
+    ['shift_cash_early', 18 * 60 + 55], ['shift_visits', 18 * 60 + 57], ['shift_gift_early', 18 * 60 + 58], ['shift_cash_late', 19 * 60 + 5], ['shift_gift_late', 19 * 60 + 6],
+    ['close_cash', 28 * 60 + 10], ['close_visits', 28 * 60 + 12], ['close_gift', 28 * 60 + 13],
+  ]
+  const memos = ['1万円札の両替が必要です', 'ギフトカードの残りが少なくなっています', '来店履歴の取消が1件あります（受付で確認済み）', 'レジ金の千円札が不足気味です']
+  const checks: (typeof t.cashChecks.$inferInsert)[] = []
+  const notes: (typeof t.cashNotes.$inferInsert)[] = []
+  for (let d = '2026-10-01'; d < today; d = addDays(d, 1)) {
+    for (const [item, min] of items) {
+      if (rand() < 0.02) continue // まれに未確認
+      checks.push({ storeId: HARNES, businessDate: d, item, staffMemberId: pick(staff).id, checkedAt: jstAt(d, min + Math.floor(rand() * 5)) })
+    }
+    if (rand() < 0.2) notes.push({ storeId: HARNES, businessDate: d, staffMemberId: pick(staff).id, body: pick(memos), createdAt: jstAt(d, 19 * 60 + 10) })
+  }
+  await chunked(checks, 300, (part) => db.insert(t.cashChecks).values(part))
+  if (notes.length) await db.insert(t.cashNotes).values(notes)
+  return { checks: checks.length, notes: notes.length }
 }

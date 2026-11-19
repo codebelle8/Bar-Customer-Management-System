@@ -75,7 +75,7 @@ export default async function StaffPage() {
             </li>
             <li className="flex gap-3">
               <ShieldCheck className="mt-0.5 size-5 shrink-0 text-info" />
-              <span><b>スタッフ</b>：所属店舗のデータのみ利用できます（来店受付・会員管理・売上管理・勤怠の打刻・割引の確認・会員規約）。</span>
+              <span><b>スタッフ</b>：所属店舗のデータのみ利用できます（来店受付・会員管理・売上管理・レジ金の確認・勤怠の打刻・割引の確認・会員規約）。</span>
             </li>
           </ul>
           <ul className="mt-4 list-disc space-y-1 rounded-lg bg-page py-3 pr-3 pl-7 text-[12px] text-sub">

@@ -202,6 +202,28 @@ export const attendance = pgTable('attendance', {
   updatedAt: ts('updated_at').notNull().defaultNow(),
 })
 
+/** レジ金の確認（営業日・確認項目ごとに 1 件。確認項目は lib/cash.ts） */
+export const cashChecks = pgTable('cash_checks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: text('store_id').notNull().references(() => stores.id),
+  businessDate: date('business_date', { mode: 'string' }).notNull(),
+  item: text('item').notNull(),
+  staffMemberId: uuid('staff_member_id').notNull().references(() => staffMembers.id),
+  checkedAt: ts('checked_at').notNull().defaultNow(),
+  createdBy: uuid('created_by').references(() => users.id),
+})
+
+/** レジ金の引継ぎメモ */
+export const cashNotes = pgTable('cash_notes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: text('store_id').notNull().references(() => stores.id),
+  businessDate: date('business_date', { mode: 'string' }).notNull(),
+  staffMemberId: uuid('staff_member_id').references(() => staffMembers.id),
+  body: text('body').notNull(),
+  createdBy: uuid('created_by').references(() => users.id),
+  createdAt: ts('created_at').notNull().defaultNow(),
+})
+
 export type Member = typeof members.$inferSelect
 export type Visit = typeof visits.$inferSelect
 export type VisitItem = typeof visitItems.$inferSelect

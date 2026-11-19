@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import {
-  Bell, CalendarDays, ChartColumn, ChevronDown, Clock, FileText, Gift, House, KeyRound, LineChart, LogOut, Menu, Settings, UserCheck, UserCog, Users, X,
+  Banknote, Bell, CalendarDays, ChartColumn, ChevronDown, Clock, FileText, Gift, House, KeyRound, LineChart, LogOut, Menu, Settings, UserCheck, UserCog, Users, X,
 } from 'lucide-react'
 import { logout, selectStore } from '@/app/actions'
 import type { ThemePref } from '@/lib/theme'
@@ -16,6 +16,7 @@ export const NAV = [
   { href: '/reception', label: '来店受付', icon: UserCheck, owner: false },
   { href: '/members', label: '会員管理', icon: Users, owner: false },
   { href: '/sales', label: '売上管理', icon: ChartColumn, owner: false },
+  { href: '/cash', label: 'レジ金', icon: Banknote, owner: false },
   { href: '/attendance', label: '勤怠', icon: Clock, owner: false },
   { href: '/pricing', label: '料金設定・カレンダー', icon: CalendarDays, owner: true },
   { href: '/discounts', label: '割引・特典', icon: Gift, owner: false },
