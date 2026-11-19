@@ -116,10 +116,27 @@ async function main() {
   const ownerTouched = await withRls(so, (tx) => tx.update(t.users).set({ name: 'x' }).where(eq(t.users.id, owner.id)).returning())
   check('店舗オーナーは全店舗のオーナーのアカウントを変更できない', ownerTouched.length === 0)
 
-  // 7. app_user ロールで RLS が有効になっていること
-  const flags = await db.execute(sql`select relname, relrowsecurity from pg_class where relname in ('members','visits','visit_items','expenses','users','price_rules')`)
+  // 7. 勤怠：他店舗の対象者・記録は見えない。スタッフは打刻のみ（対象者の登録・記録の削除は不可）
+  const [harnesStaffMember] = await db.select().from(t.staffMembers).where(eq(t.staffMembers.storeId, HARNES)).limit(1)
+  const att = await withRls(as(fresh), async (tx) => ({
+    staff: (await tx.select().from(t.staffMembers)).length,
+    records: (await tx.select().from(t.attendance)).length,
+  }))
+  check('新店スタッフはハーネスの勤怠（対象者・記録）を参照できない', !!harnesStaffMember && att.staff === 0 && att.records === 0, JSON.stringify(att))
+  check('他店舗の対象者で打刻できない', await denied(() => withRls(as(fresh), (tx) =>
+    tx.insert(t.attendance).values({ storeId: HARNES, staffMemberId: harnesStaffMember.id, businessDate: '2026-11-01', clockIn: new Date() }).returning())))
+  const noMember = await denied(() => withRls(as(staff), (tx) => tx.insert(t.staffMembers).values({ storeId: HARNES, name: 'rls-test', kind: 'アルバイト' }).returning()))
+  const punched = await withRls(as(staff), (tx) =>
+    tx.insert(t.attendance).values({ storeId: HARNES, staffMemberId: harnesStaffMember.id, businessDate: '2026-11-01', clockIn: new Date('2026-11-01T09:00:00Z'), clockOut: new Date('2026-11-01T10:00:00Z') }).returning())
+  const noDelete = await withRls(as(staff), (tx) => tx.delete(t.attendance).where(eq(t.attendance.id, punched[0].id)).returning())
+  check('スタッフは自店舗で打刻できるが、対象者の登録・記録の削除はできない', noMember && punched.length === 1 && noDelete.length === 0, JSON.stringify({ noMember, punched: punched.length, deleted: noDelete.length }))
+  const soDelete = await withRls({ role: storeOwner.role, storeId: storeOwner.storeId, userId: storeOwner.id }, (tx) => tx.delete(t.attendance).where(eq(t.attendance.id, punched[0].id)).returning())
+  check('店舗オーナーは自店舗の勤怠の記録を削除できる', soDelete.length === 1)
+
+  // 8. app_user ロールで RLS が有効になっていること
+  const flags = await db.execute(sql`select relname, relrowsecurity from pg_class where relname in ('members','visits','visit_items','expenses','users','price_rules','staff_members','attendance')`)
   const rows = (Array.isArray(flags) ? flags : (flags as unknown as { rows: { relname: string; relrowsecurity: boolean }[] }).rows) as { relname: string; relrowsecurity: boolean }[]
-  check('主要テーブルで Row Level Security が有効', rows.length === 6 && rows.every((r) => r.relrowsecurity), rows.map((r) => r.relname).join(','))
+  check('主要テーブルで Row Level Security が有効', rows.length === 8 && rows.every((r) => r.relrowsecurity), rows.map((r) => r.relname).join(','))
 }
 
 main()

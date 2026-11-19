@@ -7,6 +7,8 @@ export type Category = '男性' | '女性' | 'カップル'
 /** owner：全店舗のオーナー / store_owner：所属店舗のみのオーナー / staff：所属店舗のスタッフ */
 export type Role = 'owner' | 'store_owner' | 'staff'
 export type CustomPrices = Partial<Record<DayPart, Partial<Record<Category, number>>>>
+/** 勤怠の区分 */
+export type StaffKind = '社員' | 'アルバイト'
 
 const ts = (name: string) => timestamp(name, { withTimezone: true, mode: 'date' })
 
@@ -178,6 +180,28 @@ export const auditLogs = pgTable('audit_logs', {
   createdAt: ts('created_at').notNull().defaultNow(),
 })
 
+/** 勤怠の対象者（社員・アルバイト）。ログイン用のアカウントとは別 */
+export const staffMembers = pgTable('staff_members', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: text('store_id').notNull().references(() => stores.id),
+  name: text('name').notNull(),
+  kind: text('kind').$type<StaffKind>().notNull(),
+  active: boolean('active').notNull().default(true),
+  createdAt: ts('created_at').notNull().defaultNow(),
+})
+
+/** 出勤・退勤の記録（退勤前は clockOut が null） */
+export const attendance = pgTable('attendance', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storeId: text('store_id').notNull().references(() => stores.id),
+  staffMemberId: uuid('staff_member_id').notNull().references(() => staffMembers.id),
+  businessDate: date('business_date', { mode: 'string' }).notNull(),
+  clockIn: ts('clock_in').notNull(),
+  clockOut: ts('clock_out'),
+  createdBy: uuid('created_by').references(() => users.id),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+})
+
 export type Member = typeof members.$inferSelect
 export type Visit = typeof visits.$inferSelect
 export type VisitItem = typeof visitItems.$inferSelect
@@ -188,3 +212,5 @@ export type MenuItem = typeof menuItems.$inferSelect
 export type Expense = typeof expenses.$inferSelect
 export type User = typeof users.$inferSelect
 export type Store = typeof stores.$inferSelect
+export type StaffMember = typeof staffMembers.$inferSelect
+export type Attendance = typeof attendance.$inferSelect

@@ -336,4 +336,45 @@ async function seedDemo(db: DB) {
     ['龍経費', '46経費', '口座移動'].map((label, i) => ({ storeId: HARNES, month: '2026-10', label, amount: 0, sort: i })),
   )
   await db.insert(t.auditLogs).values({ storeId: HARNES, userId: owner.id, userName: owner.name, action: 'デモデータ作成', target: `会員 ${members.length}名・来店 ${visits.length}件` })
+  await seedAttendanceDemo(db)
+}
+
+/**
+ * 勤怠のデモデータ（ハーネス）：対象者は架空の名前（実際のスタッフ名は本番で画面から登録する）。
+ * 2026-10-01 から前日までの出退勤を作る。対象者が登録済みの場合は何もしない（確認用 DB への追加にも使う）
+ */
+export async function seedAttendanceDemo(db: DB) {
+  const [{ n }] = await db.select({ n: count() }).from(t.staffMembers).where(eq(t.staffMembers.storeId, HARNES))
+  if (n > 0) return { added: 0 }
+  const rand = rng(20261119)
+  const ri = (a: number, b: number) => a + Math.floor(rand() * (b - a + 1))
+  const step = (a: number, b: number) => ri(a / 5, b / 5) * 5
+  const employees = ['さくら', 'たける']
+  const partTimers = ['あおい', 'いつき', 'うた', 'えま', 'かい', 'きらら', 'そら', 'ななみ', 'ひなた', 'みお', 'れん']
+  const base = Date.UTC(2026, 9, 1)
+  const staff = [
+    ...employees.map((name, i) => ({ id: crypto.randomUUID(), storeId: HARNES, name, kind: '社員' as const, createdAt: new Date(base + i * 1000) })),
+    ...partTimers.map((name, i) => ({ id: crypto.randomUUID(), storeId: HARNES, name, kind: 'アルバイト' as const, createdAt: new Date(base + (10 + i) * 1000) })),
+  ]
+  await db.insert(t.staffMembers).values(staff)
+  const [settings] = await db.select().from(t.storeSettings).where(eq(t.storeSettings.storeId, HARNES))
+  const today = businessDateOf(new Date(), settings)
+  const rows: (typeof t.attendance.$inferInsert)[] = []
+  const add = (staffMemberId: string, date: string, from: number, to: number) =>
+    rows.push({ storeId: HARNES, staffMemberId, businessDate: date, clockIn: jstAt(date, from), clockOut: jstAt(date, to), updatedAt: jstAt(date, to) })
+  const emp = staff.filter((m) => m.kind === '社員')
+  const pts = staff.filter((m) => m.kind === 'アルバイト')
+  for (let d = '2026-10-01', i = 0; d < today; d = addDays(d, 1), i++) {
+    const weekend = [0, 5, 6].includes(weekdayOf(d))
+    // 社員：交代で夜の部（週末は2名）
+    const onDuty = weekend ? emp : [emp[i % 2]]
+    for (const m of onDuty) add(m.id, d, step(17 * 60 + 30, 18 * 60 + 30), step(26 * 60 + 30, 28 * 60))
+    // アルバイト：昼の部 1名＋夜の部 1〜2名（週末は 2〜3名）
+    const shuffled = [...pts].sort(() => rand() - 0.5)
+    add(shuffled[0].id, d, step(12 * 60 + 45, 13 * 60 + 15), step(18 * 60, 19 * 60))
+    const night = weekend ? ri(2, 3) : ri(1, 2)
+    for (const m of shuffled.slice(1, 1 + night)) add(m.id, d, step(18 * 60 + 45, 19 * 60 + 30), step(25 * 60 + 30, 27 * 60 + 30))
+  }
+  await chunked(rows, 300, (part) => db.insert(t.attendance).values(part))
+  return { added: rows.length }
 }
