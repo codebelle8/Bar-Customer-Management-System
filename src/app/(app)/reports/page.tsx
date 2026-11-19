@@ -10,9 +10,9 @@ import { MonthNav } from '@/components/sales/MonthNav'
 import { isYm } from '@/components/sales/constants'
 import * as t from '@/db/schema'
 import { query, requireOwner } from '@/lib/dal'
-import { addMonths, fmtJaMonth, fmtMD, num, pct, yen } from '@/lib/format'
+import { addMonths, fmtJaMonth, fmtMD, num, pct, WEEK_JA, weekdayOf, yen } from '@/lib/format'
 import { DAY_TYPE_STYLE, DAY_TYPES } from '@/lib/pricing'
-import { dailyRows, sumRows, summaryOf } from '@/lib/stats'
+import { addCounts, countsTotal, dailyRows, emptyCounts, sumRows, summaryOf, visitorBreakdown, type VisitorCounts } from '@/lib/stats'
 import { businessToday, loadAdjustments, monthRange } from '../sales/data'
 
 export const metadata: Metadata = { title: 'レポート' }
@@ -24,6 +24,7 @@ const TABS = [
   { key: 'trend', label: '月別推移' },
   { key: 'members', label: '会員別売上' },
   { key: 'types', label: '料金区分別' },
+  { key: 'visitors', label: '来店者内訳' },
 ] as const
 type Tab = (typeof TABS)[number]['key']
 
@@ -56,6 +57,7 @@ export default async function ReportsPage({ searchParams }: PageProps<'/reports'
       {tab === 'trend' && <TrendTab month={month} today={today} hrefFor={(m) => href('summary', m)} />}
       {tab === 'members' && <MembersTab month={month} today={today} />}
       {tab === 'types' && <TypesTab month={month} today={today} />}
+      {tab === 'visitors' && <VisitorsTab month={month} today={today} />}
     </div>
   )
 }
@@ -462,3 +464,79 @@ function FragmentCells({ cnt, fee, unit, strong }: { cnt: number; fee: number; u
   )
 }
 
+
+/* ------------------------------ 来店者内訳 ------------------------------ */
+
+const VCOLS = ['男既存', '男新規', '女既存', '女新規', '既存計', '新規計', '総合計'] as const
+/** 16列を1画面に収めるため、この表だけ余白を詰める */
+const VTH = 'px-2 py-2.5 text-[12px] font-medium whitespace-nowrap text-sub'
+const VTD = 'px-2 py-2'
+
+async function VisitorsTab({ month, today }: { month: string; today: string }) {
+  const ctx = await requireOwner()
+  const { from, to } = monthRange(month, today)
+  const data = await query(async (tx) => ({ rows: await visitorBreakdown(tx, ctx.storeId, from, to), daily: await dailyRows(tx, ctx.storeId, from, to) }), ctx)
+  const dayTotal = data.rows.reduce((a, r) => addCounts(a, r.day), emptyCounts())
+  const nightTotal = data.rows.reduce((a, r) => addCounts(a, r.night), emptyCounts())
+  const people = countsTotal(dayTotal).all + countsTotal(nightTotal).all
+  const reportPeople = sumRows(data.daily).people
+  return (
+    <Card title={<>来店者内訳<span className="text-[13px] font-medium text-sub">{fmtJaMonth(month)}（{fmtMD(from)}〜{fmtMD(to)}）</span></>}
+      action={month === today.slice(0, 7) ? <Badge tone="amber">集計中（{fmtMD(today)}まで）</Badge> : undefined} bodyClass="px-2 pt-2 pb-3">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[820px] text-[13px] tabular-nums" data-testid="visitor-breakdown">
+          <thead className="bg-[#f8f6fc]">
+            <tr>
+              <th rowSpan={2} className={cx(VTH, 'border-b border-line text-left')}>日付</th>
+              <th rowSpan={2} className={cx(VTH, 'border-b border-line text-left')}>曜日</th>
+              <th colSpan={7} className={cx(VTH, 'border-l border-line text-center font-bold text-ink')}>昼部</th>
+              <th colSpan={7} className={cx(VTH, 'border-l border-line text-center font-bold text-ink')}>夜部</th>
+            </tr>
+            <tr>
+              {(['day', 'night'] as const).map((part) =>
+                VCOLS.map((c, i) => <th key={`${part}${c}`} className={cx(VTH, 'border-b border-line text-right', i === 0 && 'border-l', i >= 4 && 'text-ink')}>{c}</th>),
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {data.rows.map((r) => {
+              const w = weekdayOf(r.date)
+              return (
+                <tr key={r.date} className="border-b border-line">
+                  <td className={cx(VTD, 'whitespace-nowrap')}>{fmtMD(r.date)}</td>
+                  <td className={cx(VTD, w === 0 && 'text-up', w === 6 && 'text-info')}>{WEEK_JA[w]}</td>
+                  <VisitorCells c={r.day} />
+                  <VisitorCells c={r.night} />
+                </tr>
+              )
+            })}
+            <tr className="bg-brand-soft/70 font-bold">
+              <td className={cx(VTD, 'text-brand')}>合計</td>
+              <td className={VTD} />
+              <VisitorCells c={dayTotal} />
+              <VisitorCells c={nightTotal} />
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div className="mx-3 mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-line bg-[#faf8fd] px-4 py-3 text-[12px] text-sub tabular-nums">
+        <span>昼部 <b className="text-ink">{num(countsTotal(dayTotal).all)}名</b></span>
+        <span>＋ 夜部 <b className="text-ink">{num(countsTotal(nightTotal).all)}名</b></span>
+        <span>＝ 日報の計人数 <b className={people === reportPeople ? 'text-ok' : 'text-up'}>{num(reportPeople)}名</b></span>
+      </div>
+      <p className="px-3 pt-2 text-[11px] text-mute">来店受付の記録から自動で集計します（取消は除く）。カップルは2名として、それぞれの性別で数えます。新規＝その日に入会した会員です。</p>
+    </Card>
+  )
+}
+
+function VisitorCells({ c }: { c: VisitorCounts }) {
+  const tot = countsTotal(c)
+  const vals = [c.maleOld, c.maleNew, c.femaleOld, c.femaleNew, tot.old, tot.new, tot.all]
+  return (
+    <>
+      {vals.map((v, i) => (
+        <td key={i} className={cx(VTD, 'text-right', i === 0 && 'border-l border-line', i >= 4 && 'font-bold', i === 6 && 'text-brand', !v && 'text-mute')}>{v}</td>
+      ))}
+    </>
+  )
+}

@@ -1,4 +1,4 @@
-// 月次の売上表（Excel）：店舗の「年.月総括」シートと同じ並び＋来店明細
+// 月次の売上表（Excel）：店舗の「年.月総括」シートと同じ並び＋来店明細＋来店者内訳（店舗の「来店者内訳」と同じ並び）
 import type { NextRequest } from 'next/server'
 import { redirect } from 'next/navigation'
 import { and, asc, between, eq, sql } from 'drizzle-orm'
@@ -8,7 +8,7 @@ import * as t from '@/db/schema'
 import { audit, getCurrentUser, query, requireCtx } from '@/lib/dal'
 import { fmtJaMonth, jstParts, WEEK_JA, weekdayOf } from '@/lib/format'
 import { holidayName } from '@/lib/pricing'
-import { dailyRows, summaryOf, type DailyRow } from '@/lib/stats'
+import { addCounts, countsTotal, dailyRows, emptyCounts, summaryOf, visitorBreakdown, type DailyRow, type VisitorCounts, type VisitorRow } from '@/lib/stats'
 import { adjustmentTotals, dotMonth, isYm } from '@/components/sales/constants'
 import { businessToday, loadAdjustments, monthRange } from '@/app/(app)/sales/data'
 
@@ -81,14 +81,16 @@ export async function GET(request: NextRequest) {
       .leftJoin(partner, eq(partner.id, t.visits.partnerMemberId))
       .where(and(eq(t.visits.storeId, ctx.storeId), between(t.visits.businessDate, from, to)))
       .orderBy(asc(t.visits.businessDate), asc(t.visits.checkedInAt))
+    const visitors = month > today.slice(0, 7) ? [] : await visitorBreakdown(tx, ctx.storeId, from, to)
     await audit(tx, ctx, 'Excel出力', fileName(month))
-    return { month, rows, adjustments, visits }
+    return { month, rows, adjustments, visits, visitors }
   }, ctx)
 
   const { month } = data
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, summarySheet(month, ctx.store.name, data.rows, data.adjustments), `${dotMonth(month)}総括`)
   XLSX.utils.book_append_sheet(wb, visitSheet(data.visits), `${dotMonth(month)}来店明細`)
+  XLSX.utils.book_append_sheet(wb, visitorSheet(month, data.visitors), `${dotMonth(month)}来店者内訳`)
   const body = XLSX.write(wb, { type: 'array', bookType: 'xlsx', compression: true }) as ArrayBuffer
   const name = fileName(month)
   return new Response(body, {
@@ -216,5 +218,34 @@ function visitSheet(visits: { v: t.Visit; memberNo: string; handle: string; part
   const ws = XLSX.utils.aoa_to_sheet([head, ...body])
   ws['!cols'] = [11, 7, 7, 10, 30, 8, 5, 9, 9, 8, 8, 8, 9, 10, 8].map((wch) => ({ wch }))
   ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(body.length, 1), c: head.length - 1 } }) }
+  return ws
+}
+
+/** 来店者内訳シート：店舗の「来店者内訳」と同じ並び（A 日付・B 曜日・C〜I 昼部・J〜P 夜部・Q 備考） */
+function visitorSheet(month: string, rows: VisitorRow[]) {
+  const cols = ['男既存', '男新規', '女既存', '女新規', '既存計', '新規計', '総合計']
+  const vals = (c: VisitorCounts) => {
+    const tot = countsTotal(c)
+    return [c.maleOld, c.maleNew, c.femaleOld, c.femaleNew, tot.old, tot.new, tot.all]
+  }
+  const day = rows.reduce((a, r) => addCounts(a, r.day), emptyCounts())
+  const night = rows.reduce((a, r) => addCounts(a, r.night), emptyCounts())
+  const aoa: Row[] = [
+    [null, null, null, null, null, null, +month.slice(0, 4), '年', +month.slice(5, 7), '月来店者内訳'],
+    [null, null, '昼部', null, null, null, null, null, null, '夜部', null, null, null, null, null, null, '備考'],
+    ['日付', '曜日', ...cols, ...cols],
+    ...rows.map((r): Row => [numCell(serial(r.date), 'm/d'), WEEK_JA[weekdayOf(r.date)], ...vals(r.day), ...vals(r.night)]),
+    ['合計', null, ...vals(day), ...vals(night)],
+  ]
+  const ws = XLSX.utils.aoa_to_sheet(aoa)
+  const last = aoa.length - 1
+  ws['!merges'] = [
+    XLSX.utils.decode_range('J1:S1'),
+    XLSX.utils.decode_range('C2:I2'),
+    XLSX.utils.decode_range('J2:P2'),
+    XLSX.utils.decode_range('Q2:S3'),
+    ...Array.from({ length: last - 2 }, (_, i) => XLSX.utils.decode_range(`Q${i + 4}:S${i + 4}`)),
+  ]
+  ws['!cols'] = [7, 5, ...Array(14).fill(7), 8, 8, 8].map((wch) => ({ wch }))
   return ws
 }

@@ -6,6 +6,7 @@
 //   計人数＝男性＋女性＋カップル×2
 import 'server-only'
 import { and, between, eq, gte, inArray, lte, ne, or, sql } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 import type { Tx } from '@/db/client'
 import * as t from '@/db/schema'
 import { addDays } from './format'
@@ -193,4 +194,75 @@ export async function visitCounts(tx: Tx, storeId: string, from: string, to: str
   for (const r of rows)
     for (const id of [r.m, r.p]) if (id && (!memberIds || memberIds.includes(id))) counts.set(id, (counts.get(id) ?? 0) + 1)
   return counts
+}
+
+/* ------------------------------ 来店者内訳 ------------------------------ */
+
+/** 来店者内訳の 1 部（店舗の Excel「来店者内訳」と同じ区分） */
+export interface VisitorCounts {
+  maleOld: number
+  maleNew: number
+  femaleOld: number
+  femaleNew: number
+}
+export interface VisitorRow {
+  date: string
+  day: VisitorCounts
+  night: VisitorCounts
+}
+export const emptyCounts = (): VisitorCounts => ({ maleOld: 0, maleNew: 0, femaleOld: 0, femaleNew: 0 })
+export const countsTotal = (c: VisitorCounts) => ({ old: c.maleOld + c.femaleOld, new: c.maleNew + c.femaleNew, all: c.maleOld + c.maleNew + c.femaleOld + c.femaleNew })
+export function addCounts(a: VisitorCounts, b: VisitorCounts): VisitorCounts {
+  return { maleOld: a.maleOld + b.maleOld, maleNew: a.maleNew + b.maleNew, femaleOld: a.femaleOld + b.femaleOld, femaleNew: a.femaleNew + b.femaleNew }
+}
+
+/**
+ * 日別・昼夜別の来店者内訳（人数）。取消は除く。
+ *   男性・女性の来店は 1 名（区分のとおり）、カップルは 2 名（それぞれの会員の性別）。
+ *   新規＝その営業日に入会した会員（紙の会員証からの移行登録は除く。日報の「新規獲得」と同じ考え方）、それ以外は既存。
+ *   昼＋夜の総合計は日報の「計人数」と一致する。
+ */
+export async function visitorBreakdown(tx: Tx, storeId: string, from: string, to: string): Promise<VisitorRow[]> {
+  const main = alias(t.members, 'main')
+  const partner = alias(t.members, 'partner')
+  const rows = await tx
+    .select({
+      date: t.visits.businessDate,
+      part: t.visits.dayPart,
+      cat: t.visits.category,
+      mGender: main.gender,
+      mJoined: main.joinedAt,
+      mPaper: sql<boolean>`${main.termsVersion} = '紙'`,
+      pGender: partner.gender,
+      pJoined: partner.joinedAt,
+      pPaper: sql<boolean>`coalesce(${partner.termsVersion} = '紙', false)`,
+    })
+    .from(t.visits)
+    .innerJoin(main, eq(main.id, t.visits.memberId))
+    .leftJoin(partner, eq(partner.id, t.visits.partnerMemberId))
+    .where(and(eq(t.visits.storeId, storeId), between(t.visits.businessDate, from, to), ne(t.visits.status, 'void')))
+
+  const map = new Map<string, VisitorRow>()
+  for (let d = from; d <= to; d = addDays(d, 1)) map.set(d, { date: d, day: emptyCounts(), night: emptyCounts() })
+  const put = (c: VisitorCounts, gender: string, isNew: boolean) => {
+    if (gender === '女性') {
+      if (isNew) c.femaleNew++
+      else c.femaleOld++
+    } else if (isNew) c.maleNew++
+    else c.maleOld++
+  }
+  for (const r of rows) {
+    const row = map.get(r.date)
+    if (!row) continue
+    const c = r.part === '昼' ? row.day : row.night
+    const mNew = r.mJoined === r.date && !r.mPaper
+    if (r.cat === 'カップル') {
+      put(c, r.mGender, mNew)
+      // 同伴者が未登録の古いデータは、主会員と異なる性別として数える
+      put(c, r.pGender ?? (r.mGender === '女性' ? '男性' : '女性'), r.pJoined === r.date && !r.pPaper)
+    } else {
+      put(c, r.cat, mNew)
+    }
+  }
+  return [...map.values()]
 }
