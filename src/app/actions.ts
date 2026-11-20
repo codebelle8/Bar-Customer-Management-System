@@ -37,14 +37,18 @@ export async function logout() {
   redirect('/login')
 }
 
-/** 表示する店舗の切り替え（全店舗のオーナーのみ） */
+/** 別の店舗の会員を表示するときの切り替え（会員詳細の「切り替えて表示」ボタン） */
 export async function selectStore(formData: FormData) {
+  const r = await switchStore(String(formData.get('storeId') ?? ''))
+  if (r.ok) redirect(String(formData.get('back') ?? '/dashboard'))
+}
+
+/** 表示する店舗の切り替え（全店舗のオーナーのみ）。画面の再読み込みは呼び出し側で行う */
+export async function switchStore(id: string): Promise<{ ok: boolean }> {
   const ctx = await requireCtx()
-  if (!ctx.allStores) return
-  const id = String(formData.get('storeId') ?? '')
-  if (!ctx.stores.some((s) => s.id === id)) return
+  if (!ctx.allStores || typeof id !== 'string' || !ctx.stores.some((s) => s.id === id)) return { ok: false }
   ;(await cookies()).set(STORE_COOKIE, id, { ...cookieBase, maxAge: 60 * 60 * 24 * 365 })
-  redirect(String(formData.get('back') ?? '/dashboard'))
+  return { ok: true }
 }
 
 export async function changePassword(_prev: { error?: string; ok?: boolean } | undefined, formData: FormData) {

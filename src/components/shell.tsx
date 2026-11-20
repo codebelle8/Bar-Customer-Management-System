@@ -2,11 +2,11 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import {
-  Banknote, Bell, CalendarDays, ChartColumn, ChevronDown, Clock, FileText, Gift, House, KeyRound, LineChart, LogOut, Menu, Settings, UserCheck, UserCog, Users, X,
+  Banknote, Bell, CalendarDays, ChartColumn, ChevronDown, Clock, FileText, Gift, House, KeyRound, LineChart, Loader2, LogOut, Menu, Settings, UserCheck, UserCog, Users, X,
 } from 'lucide-react'
-import { logout, selectStore } from '@/app/actions'
+import { logout, switchStore } from '@/app/actions'
 import type { ThemePref } from '@/lib/theme'
 import { ThemeToggle } from './theme'
 import { cx } from './ui'
@@ -25,6 +25,45 @@ export const NAV = [
   { href: '/settings', label: '設定', icon: Settings, owner: true },
   { href: '/terms', label: '会員規約', icon: FileText, owner: false },
 ] as const
+
+/**
+ * 店舗の切り替え：切り替え中は操作できないようにして表示し、終わったら画面全体を読み込み直す
+ * （前の店舗の数字やグラフが画面に残らないようにするため）。個別の会員・来店の画面は一覧に戻る
+ */
+function StoreSwitcher({ stores, storeId }: { stores: { id: string; name: string; status: string }[]; storeId: string }) {
+  const pathname = usePathname()
+  const [pending, start] = useTransition()
+  const [failed, setFailed] = useState(false)
+  function change(id: string) {
+    setFailed(false)
+    start(async () => {
+      const r = await switchStore(id).catch(() => ({ ok: false }))
+      if (!r.ok) {
+        setFailed(true)
+        return
+      }
+      const back = /^\/members\/[^/]+/.test(pathname) ? '/members' : pathname.startsWith('/reception/') ? '/reception' : pathname
+      window.location.assign(back + (back === pathname ? window.location.search : ''))
+      await new Promise(() => {}) // 読み込みが終わるまで「切り替えています」を表示したままにする
+    })
+  }
+  return (
+    <div className="relative flex items-center gap-2">
+      <select name="storeId" defaultValue={storeId} disabled={pending} onChange={(e) => change(e.currentTarget.value)} data-testid="store-switch"
+        className="h-10 min-w-44 rounded-lg border border-line bg-white px-3 text-[14px] font-medium outline-none focus:border-brand disabled:opacity-60" aria-label="店舗">
+        {stores.map((s) => (
+          <option key={s.id} value={s.id}>{s.name}{s.status === 'preparing' && !s.name.includes('準備中') ? '（準備中）' : ''}</option>
+        ))}
+      </select>
+      {failed && <span className="text-[12px] text-up">切り替えできませんでした</span>}
+      {pending && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-white/60 backdrop-blur-[1px]" role="status" aria-live="polite">
+          <span className="flex items-center gap-2 rounded-xl border border-line bg-white px-5 py-3 text-[15px] font-bold shadow-lg"><Loader2 className="size-5 animate-spin text-brand" />店舗を切り替えています…</span>
+        </div>
+      )}
+    </div>
+  )
+}
 
 function NavList({ isOwner, onNavigate }: { isOwner: boolean; onNavigate?: () => void }) {
   const pathname = usePathname()
@@ -123,15 +162,7 @@ export function Topbar(props: {
           <div className="hidden items-center gap-2 md:flex">
             <span className="hidden text-[13px] font-medium whitespace-nowrap text-sub xl:inline">店舗：</span>
             {canSwitchStore ? (
-              <form action={selectStore}>
-                <input type="hidden" name="back" value={pathname} />
-                <select name="storeId" defaultValue={storeId} onChange={(e) => e.currentTarget.form?.requestSubmit()}
-                  className="h-10 min-w-44 rounded-lg border border-line bg-white px-3 text-[14px] font-medium outline-none focus:border-brand" aria-label="店舗">
-                  {stores.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name}{s.status === 'preparing' && !s.name.includes('準備中') ? '（準備中）' : ''}</option>
-                  ))}
-                </select>
-              </form>
+              <StoreSwitcher key={storeId} stores={stores} storeId={storeId} />
             ) : (
               <span className="flex h-10 items-center rounded-lg border border-line bg-page px-3 text-[14px] font-medium whitespace-nowrap">{storeName}</span>
             )}
