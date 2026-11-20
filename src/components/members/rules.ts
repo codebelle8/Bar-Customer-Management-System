@@ -158,6 +158,22 @@ export interface CheckedRow {
   warnings: string[]
 }
 
+/**
+ * 取込時の重複の扱い（2026-11-20 お客様確認：同じ会員番号の別の会員は、そのまま取り込む）
+ * - 会員番号とハンドルネームが同じ行は「同じ会員」とみなし、2行目以降・登録済みの会員は取り込まない
+ * - 会員番号だけが同じ行は、別の会員として取り込む（注意として表示）
+ */
+export const DUP = {
+  sameInFile: 'ファイル内で同じ会員が重複（会員番号・ハンドルネームが同じ）',
+  registered: '既に登録済み（会員番号・ハンドルネームが同じ）',
+  noInFile: 'ファイル内に同じ会員番号の行あり（別の会員として取り込みます）',
+  noRegistered: '同じ会員番号の会員が登録済み（別の会員として取り込みます）',
+} as const
+
+/** 同じ会員かどうかの判定に使うキー（会員番号＋ハンドルネーム。空白・全角半角・大文字小文字の違いは無視） */
+export const memberKey = (memberNo: string, handleName: string) =>
+  `${memberNo}\u0000${norm(handleName).replace(/\s+/g, '').toLowerCase()}`
+
 /** 1行分のチェック（重複以外。重複は呼び出し側で確認） */
 export function checkImportRow(r: ImportRow, prefix: string, today: string, joinDefault = today): CheckedRow {
   const errors: string[] = []

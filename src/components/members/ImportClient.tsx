@@ -3,10 +3,10 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CircleAlert, CircleCheck, Download, FileSpreadsheet, LoaderCircle, RotateCcw, TriangleAlert, Upload, Wand2 } from 'lucide-react'
-import { findExistingNumbers, importMembers, type ImportResult } from '@/app/(app)/members/actions'
+import { findExistingMembers, importMembers, type ImportResult } from '@/app/(app)/members/actions'
 import { Badge, Button, Card, Select, Td, Th, buttonCls, cx } from '@/components/ui'
 import { ageOn } from '@/lib/format'
-import { IMPORT_FIELDS, ROSTER_PRESET, checkImportRow, detectColumns, isBlankRow, norm, parseDateLoose, type CheckedRow, type ImportKey, type ImportRow } from './rules'
+import { DUP, IMPORT_FIELDS, ROSTER_PRESET, checkImportRow, detectColumns, isBlankRow, memberKey, norm, parseDateLoose, type CheckedRow, type ImportKey, type ImportRow } from './rules'
 
 type Mapping = Record<ImportKey, number>
 const NONE = -1
@@ -53,7 +53,7 @@ export function ImportClient({ prefix, todayJst, joinDefault, storeName }: { pre
   const [sheet, setSheet] = useState<Sheet | null>(null)
   const [mapping, setMapping] = useState<Mapping | null>(null)
   const [parseError, setParseError] = useState('')
-  const [existing, setExisting] = useState<Set<string> | null>(null)
+  const [existing, setExisting] = useState<{ keys: Set<string>; nos: Set<string> } | null>(null)
   const [onlyErrors, setOnlyErrors] = useState(false)
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
   const [result, setResult] = useState<(ImportResult & { failed?: string }) | null>(null)
@@ -165,10 +165,19 @@ export function ImportClient({ prefix, todayJst, joinDefault, storeName }: { pre
       }
       out.push(checkImportRow(raw, prefix, todayJst, joinDefault))
     })
-    // ファイル内の重複
+    // ファイル内の重複：同じ番号・同じハンドルネームの2行目は取り込まない。番号だけ同じ行は別の会員として取り込む（注意）
     const count = new Map<string, number>()
     for (const c of out) if (c.memberNo) count.set(c.memberNo, (count.get(c.memberNo) ?? 0) + 1)
-    for (const c of out) if (c.memberNo && (count.get(c.memberNo) ?? 0) > 1) c.errors.push('ファイル内で会員番号が重複')
+    const seen = new Set<string>()
+    for (const c of out) {
+      if (!c.memberNo || c.errors.length) continue
+      const key = memberKey(c.memberNo, c.handleName)
+      if (seen.has(key)) c.errors.push(DUP.sameInFile)
+      else {
+        seen.add(key)
+        if ((count.get(c.memberNo) ?? 0) > 1) c.warnings.push(DUP.noInFile)
+      }
+    }
     return { checked: out, blank }
   }, [sheet, mapping, prefix, todayJst, joinDefault])
 
@@ -177,9 +186,9 @@ export function ImportClient({ prefix, todayJst, joinDefault, storeName }: { pre
   useEffect(() => {
     if (!numbersKey) return
     let alive = true
-    findExistingNumbers(numbersKey.split('\n'))
-      .then((nos) => alive && setExisting(new Set(nos)))
-      .catch(() => alive && setExisting(new Set()))
+    findExistingMembers(numbersKey.split('\n'))
+      .then((ms) => alive && setExisting({ keys: new Set(ms.map((m) => memberKey(m.no, m.handle))), nos: new Set(ms.map((m) => m.no)) }))
+      .catch(() => alive && setExisting({ keys: new Set(), nos: new Set() }))
     return () => {
       alive = false
       setExisting(null)
@@ -187,7 +196,12 @@ export function ImportClient({ prefix, todayJst, joinDefault, storeName }: { pre
   }, [numbersKey])
 
   const rows = useMemo(
-    () => checked.map((c) => (existing?.has(c.memberNo) ? { ...c, errors: [...c.errors, '既に登録済みの会員番号'] } : c)),
+    () => checked.map((c) => {
+      if (!existing || !c.memberNo || c.errors.length) return c
+      if (existing.keys.has(memberKey(c.memberNo, c.handleName))) return { ...c, errors: [...c.errors, DUP.registered] }
+      if (existing.nos.has(c.memberNo)) return { ...c, warnings: [...c.warnings, DUP.noRegistered] }
+      return c
+    }),
     [checked, existing],
   )
   const okRows = rows.filter((r) => !r.errors.length)
@@ -273,7 +287,7 @@ export function ImportClient({ prefix, todayJst, joinDefault, storeName }: { pre
     ws['!cols'] = [{ wch: 12 }, { wch: 18 }, { wch: 14 }, { wch: 14 }, { wch: 8 }, { wch: 14 }, { wch: 14 }, { wch: 30 }, { wch: 10 }]
     const help = XLSX.utils.aoa_to_sheet([
       ['項目', '必須', '書き方'],
-      ['会員番号', '必須', `紙の会員カードの番号。数字だけでも可（自動で「${prefix}」が付きます）`],
+      ['会員番号', '必須', `紙の会員カードの番号。数字だけでも可（自動で「${prefix}」が付きます）。同じ番号の別の会員もそのまま取り込みます`],
       ['ハンドルネーム', '必須', '受付で呼ぶお名前（40文字以内）'],
       ['フリガナ', '', 'ハンドルネームの読み（検索に使います）'],
       ['本名', '', '40文字以内'],

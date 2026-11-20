@@ -7,7 +7,7 @@ import { z } from 'zod'
 import type { Tx } from '@/db/client'
 import * as t from '@/db/schema'
 import {
-  birthdayError, checkImportRow, memberNoNumber, normalizeMemberNo, parseDateLoose, type CheckedRow, type ImportRow,
+  DUP, birthdayError, checkImportRow, memberKey, memberNoNumber, normalizeMemberNo, parseDateLoose, type CheckedRow, type ImportRow,
 } from '@/components/members/rules'
 import { audit, query, requireCtx, requireOwner, type Ctx } from '@/lib/dal'
 import { jstParts } from '@/lib/format'
@@ -246,19 +246,19 @@ export async function setMemberStatus(_prev: FormState, fd: FormData): Promise<F
 
 /* ------------------------------ Excel 取込 ------------------------------ */
 
-/** 取込前の確認：すでに登録されている会員番号を返す */
-export async function findExistingNumbers(nos: string[]): Promise<string[]> {
+/** 取込前の確認：ファイルの会員番号のうち、すでに登録されている会員（番号とハンドルネーム）を返す */
+export async function findExistingMembers(nos: string[]): Promise<{ no: string; handle: string }[]> {
   const ctx = await requireCtx()
   const list = z.array(z.string().max(40)).max(30000).parse(nos)
   if (!list.length) return []
   return query(async (tx) => {
-    const found: string[] = []
+    const found: { no: string; handle: string }[] = []
     for (let i = 0; i < list.length; i += 500) {
       const rows = await tx
-        .select({ no: t.members.memberNo })
+        .select({ no: t.members.memberNo, handle: t.members.handleName })
         .from(t.members)
         .where(and(eq(t.members.storeId, ctx.storeId), inArray(t.members.memberNo, list.slice(i, i + 500))))
-      found.push(...rows.map((r) => r.no))
+      found.push(...rows)
     }
     return found
   }, ctx)
@@ -294,26 +294,29 @@ export async function importMembers(rowsIn: ImportRow[]): Promise<ImportResult> 
   const valid: CheckedRow[] = []
   for (const r of rows) {
     const c = checkImportRow(r, ctx.store.memberPrefix, today, joinDefault)
+    // 同じ番号でもハンドルネームが違えば別の会員として取り込む（同じ番号・同じ名前の2行目は取り込まない）
+    const key = memberKey(c.memberNo, c.handleName)
     if (c.errors.length) skipped.push({ line: c.line, memberNo: c.memberNo, reason: c.errors.join('・') })
-    else if (seen.has(c.memberNo)) skipped.push({ line: c.line, memberNo: c.memberNo, reason: 'ファイル内で会員番号が重複' })
+    else if (seen.has(key)) skipped.push({ line: c.line, memberNo: c.memberNo, reason: DUP.sameInFile })
     else {
-      seen.add(c.memberNo)
+      seen.add(key)
       valid.push(c)
     }
   }
   if (!valid.length) return { inserted: 0, skipped }
   const inserted = await query(async (tx) => {
+    // 登録済みの会員（番号とハンドルネームが同じ）は取り込まない（同じファイルを2回取り込んでも二重にならない）
     const exists = new Set(
       (
         await tx
-          .select({ no: t.members.memberNo })
+          .select({ no: t.members.memberNo, handle: t.members.handleName })
           .from(t.members)
-          .where(and(eq(t.members.storeId, ctx.storeId), inArray(t.members.memberNo, valid.map((v) => v.memberNo))))
-      ).map((r) => r.no),
+          .where(and(eq(t.members.storeId, ctx.storeId), inArray(t.members.memberNo, [...new Set(valid.map((v) => v.memberNo))])))
+      ).map((r) => memberKey(r.no, r.handle)),
     )
     const toInsert = valid.filter((v) => {
-      if (!exists.has(v.memberNo)) return true
-      skipped.push({ line: v.line, memberNo: v.memberNo, reason: '既に登録済みの会員番号' })
+      if (!exists.has(memberKey(v.memberNo, v.handleName))) return true
+      skipped.push({ line: v.line, memberNo: v.memberNo, reason: DUP.registered })
       return false
     })
     if (!toInsert.length) return 0
