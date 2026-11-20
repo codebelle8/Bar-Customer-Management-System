@@ -109,7 +109,6 @@ export default async function MemberDetailPage({ params, searchParams }: PagePro
   const eligible = discountTarget && thisMonth >= settings.discountMinVisits
   const appliedNow = discountTarget && lastMonth >= settings.discountMinVisits
   const nextMonth = addMonths(month, 1)
-  const maxBirthday = `${+jstParts(new Date()).date.slice(0, 4) - 20}${jstParts(new Date()).date.slice(4)}`
   const created = one(sp.created) === '1'
 
   return (
@@ -339,7 +338,7 @@ export default async function MemberDetailPage({ params, searchParams }: PagePro
         <Card title="会員情報の編集">
           <EditMemberForm
             m={{ id: m.id, memberNo: m.memberNo, handleName: m.handleName, kana: m.kana, realName: m.realName, gender: m.gender, birthday: m.birthday, referral: m.referral, memo: m.memo, idDocs: m.idDocs, feeExpiresAt: m.feeExpiresAt }}
-            isOwner={ctx.isOwner} feeOn={settings.annualFeeEnabled} maxBirthday={maxBirthday} />
+            isOwner={ctx.isOwner} feeOn={settings.annualFeeEnabled} today={jstParts(new Date()).date} />
         </Card>
         <Card title="ステータス" className="order-first self-start xl:order-none">
           <div className="mb-4 flex items-center gap-2 text-[13px] text-sub">現在：<Badge tone={STATUS_TONE[m.status]} className="text-[12px]">{STATUS_LABEL[m.status]}</Badge></div>

@@ -5,10 +5,10 @@ import { useActionState, useState, startTransition } from 'react'
 import { LoaderCircle, UserPlus, Wand2 } from 'lucide-react'
 import { createMember, type FormState } from '@/app/(app)/members/actions'
 import { Button, Field, Input, Select, Textarea, buttonCls, cx } from '@/components/ui'
-import { ageOn } from '@/lib/format'
 import { REFERRALS } from '@/lib/terms'
 import { FieldError, IdDocsField } from './IdDocsField'
-import { MIN_AGE, normalizeMemberNo } from './rules'
+import { BirthdayInput } from './BirthdayInput'
+import { normalizeMemberNo } from './rules'
 
 export function NewMemberForm(props: {
   prefix: string
@@ -19,13 +19,11 @@ export function NewMemberForm(props: {
   maxBirthday: string
   termsVersion: string
 }) {
-  const { prefix, suggestNo, initialNo, joinDefault, todayJst, maxBirthday, termsVersion } = props
+  const { prefix, suggestNo, initialNo, joinDefault, todayJst, termsVersion } = props
   const [state, dispatch, pending] = useActionState<FormState, FormData>(createMember, undefined)
   const [no, setNo] = useState(initialNo)
-  const [birthday, setBirthday] = useState('')
   const e = state?.errors ?? {}
   const normalized = normalizeMemberNo(no, prefix)
-  const age = /^\d{4}-\d{2}-\d{2}$/.test(birthday) ? ageOn(birthday, todayJst) : null
 
   return (
     <form
@@ -69,14 +67,7 @@ export function NewMemberForm(props: {
             <FieldError msg={e.gender} />
           </Field>
           <Field label="生年月日" required>
-            <div className="flex items-center gap-3">
-              <Input name="birthday" type="date" required value={birthday} onChange={(ev) => setBirthday(ev.target.value)} max={maxBirthday} min="1900-01-01" className="h-12" />
-              {age !== null && (
-                <span className={cx('shrink-0 rounded-lg px-3 py-2 text-[14px] font-bold', age < MIN_AGE ? 'bg-[#fde7eb] text-up' : 'bg-page')}>
-                  {age}歳{age < MIN_AGE && '（登録不可）'}
-                </span>
-              )}
-            </div>
+            <BirthdayInput name="birthday" today={todayJst} />
             <FieldError msg={e.birthday} />
           </Field>
           <Field label="入会日" required hint="以前からの会員は、紙の会員カードの入会日を入力してください">

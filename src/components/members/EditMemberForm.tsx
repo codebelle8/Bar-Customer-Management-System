@@ -6,6 +6,7 @@ import { updateMember, type FormState } from '@/app/(app)/members/actions'
 import { Button, Field, Input, Select, Textarea, cx } from '@/components/ui'
 import { REFERRALS } from '@/lib/terms'
 import { FieldError, IdDocsField } from './IdDocsField'
+import { BirthdayInput } from './BirthdayInput'
 
 export interface EditableMember {
   id: string
@@ -21,7 +22,7 @@ export interface EditableMember {
   feeExpiresAt: string | null
 }
 
-export function EditMemberForm({ m, isOwner, feeOn, maxBirthday }: { m: EditableMember; isOwner: boolean; feeOn: boolean; maxBirthday: string }) {
+export function EditMemberForm({ m, isOwner, feeOn, today }: { m: EditableMember; isOwner: boolean; feeOn: boolean; today: string }) {
   const [state, dispatch, pending] = useActionState<FormState, FormData>(updateMember, undefined)
   const [dirty, setDirty] = useState(false)
   const e = state?.errors ?? {}
@@ -73,7 +74,7 @@ export function EditMemberForm({ m, isOwner, feeOn, maxBirthday }: { m: Editable
           <FieldError msg={e.gender} />
         </Field>
         <Field label="生年月日" hint="20歳未満は登録できません">
-          <Input name="birthday" type="date" defaultValue={m.birthday ?? ''} max={maxBirthday} min="1900-01-01" />
+          <BirthdayInput name="birthday" defaultValue={m.birthday} today={today} />
           <FieldError msg={e.birthday} />
         </Field>
         <Field label="紹介元・きっかけ">

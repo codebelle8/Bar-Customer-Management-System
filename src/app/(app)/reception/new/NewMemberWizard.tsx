@@ -1,12 +1,13 @@
 'use client'
 // 新規入会の受付（4ステップ）：規約署名 → 本人確認 → 会員情報 → 料金・お会計
 import Link from 'next/link'
-import { useActionState, useEffect, useRef, useState, type Ref } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, Check, IdCard, Loader2, Printer, ShieldCheck } from 'lucide-react'
 import { Button, Card, Textarea, buttonCls, cx } from '@/components/ui'
 import type { Category } from '@/db/schema'
 import { ageOn, fmtJaDate } from '@/lib/format'
 import type { TermsLine } from '@/lib/terms'
+import { ERAS, NumBox, parseBirthday, type Era } from '@/components/members/BirthdayInput'
 import { checkHandleAction, registerMemberAction } from '../actions'
 import { MoneyRow, Notice } from '../_components/bits'
 import { CashBox, paidOk } from '../_components/CashBox'
@@ -17,8 +18,6 @@ import type { Gender, MemberCard, TodayView } from '../_lib/types'
 
 const STEPS = ['会員規約の説明・署名', '本人確認', '会員情報', '料金・お会計'] as const
 const SHORT = ['規約・署名', '本人確認', '会員情報', '料金・お会計'] as const
-const ERAS = { 西暦: 0, 昭和: 1925, 平成: 1988 } as const
-type Era = keyof typeof ERAS
 
 export interface WizardProps {
   terms: TermsLine[]
@@ -32,18 +31,6 @@ export interface WizardProps {
   subDocs: string[]
   referrals: string[]
   initialPartner: MemberCard | null
-}
-
-function parseBirthday(era: Era, y: string, m: string, d: string) {
-  if (!y || !m || !d) return null
-  const yy = era === '西暦' ? +y : ERAS[era] + +y
-  if (era === '西暦' && y.length !== 4) return null
-  if (era === '昭和' && (+y < 1 || +y > 64)) return null
-  if (era === '平成' && (+y < 1 || +y > 31)) return null
-  const iso = `${yy}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
-  const x = new Date(`${iso}T00:00:00Z`)
-  if (Number.isNaN(x.getTime()) || x.toISOString().slice(0, 10) !== iso) return null
-  return iso
 }
 
 export function NewMemberWizard(p: WizardProps) {
@@ -342,18 +329,5 @@ function TermsBody({ lines }: { lines: TermsLine[] }) {
         ),
       )}
     </div>
-  )
-}
-
-function NumBox({ label, value, onChange, width, max, placeholder, ref, testId }: {
-  label: string; value: string; onChange: (v: string) => void; width: string; max: number; placeholder?: string; ref?: Ref<HTMLInputElement>; testId?: string
-}) {
-  return (
-    <label className="flex items-end gap-1.5">
-      <input ref={ref} inputMode="numeric" value={value} placeholder={placeholder} data-testid={testId}
-        onChange={(e) => onChange(e.target.value.normalize('NFKC').replace(/\D/g, '').slice(0, max))}
-        className={cx('h-14 rounded-xl border border-line bg-white px-3 text-center text-[22px] font-bold tabular-nums outline-none placeholder:text-[#d5cfe2] focus:border-brand focus:ring-2 focus:ring-brand/15', width)} />
-      <span className="pb-3 text-[15px] font-bold text-sub">{label}</span>
-    </label>
   )
 }
