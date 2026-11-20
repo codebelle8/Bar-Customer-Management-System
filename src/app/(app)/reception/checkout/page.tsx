@@ -82,7 +82,9 @@ export default async function CheckoutPage({ searchParams }: PageProps<'/recepti
       <Card title="入店時のお支払い（精算済み）" action={<span className="text-[12px] text-sub">{fmtJaDate(v.businessDate)}・{v.dayType}・{PART_LABEL[v.dayPart]}{data.staffName ? `・受付 ${data.staffName}` : ''}</span>}>
         <div className="divide-y divide-line">
           <MoneyRow label={`入場料（${v.category}）`} amount={v.entranceFee} />
-          {v.discount > 0 && <MoneyRow label="リピーター割引" amount={-v.discount} note={v.discountReason} />}
+          {v.discount > 0
+            ? <MoneyRow label="リピーター割引" amount={-v.discount} note={v.discountReason} />
+            : <MoneyRow label={<span className="text-sub">リピーター割引</span>} amount={0} note="この来店は割引の対象外です" />}
           {v.joinFee > 0 && <MoneyRow label="入会金" amount={v.joinFee} />}
           {v.annualFee > 0 && <MoneyRow label="年会費" amount={v.annualFee} />}
           <MoneyRow label="入店時 お支払い済み" amount={v.entryTotal} strong />
@@ -96,6 +98,7 @@ export default async function CheckoutPage({ searchParams }: PageProps<'/recepti
           unpaid={items}
           extension={extension}
           extensionNote={extensionNote}
+          entryDiscount={v.discount}
           drinks={menu.filter((m) => m.kind !== 'extension')}
           isOwner={ctx.isOwner}
           minutes={minutes}

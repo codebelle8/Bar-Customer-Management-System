@@ -10,12 +10,14 @@ import { CashBox, paidOk } from '../_components/CashBox'
 import { elapsed, parseYen } from '../_lib/quote'
 import { MenuGrid, RemoveButton, type MenuTile, type OrderedItem } from '../order/OrderPanel'
 
-export function CheckoutPanel({ visitId, unpaid, extension, extensionNote, drinks, isOwner, minutes }: {
+export function CheckoutPanel({ visitId, unpaid, extension, extensionNote, entryDiscount, drinks, isOwner, minutes }: {
   visitId: string
   unpaid: OrderedItem[]
   /** 自動計算した延長料金（かからない場合は null） */
   extension: ExtensionCharge | null
   extensionNote: string
+  /** 入店時に入場料から差し引いたリピーター割引（退店時の精算には含めない） */
+  entryDiscount: number
   drinks: MenuTile[]
   isOwner: boolean
   minutes: number
@@ -125,6 +127,12 @@ export function CheckoutPanel({ visitId, unpaid, extension, extensionNote, drink
           )}
         </ul>
       </Card>
+
+      <p className="-mt-2 rounded-lg bg-page px-3 py-2 text-[12px] text-sub" data-testid="checkout-discount-note">
+        {entryDiscount > 0
+          ? <>リピーター割引は、入店時の入場料で割引済みです（<b className="text-up">−¥{entryDiscount.toLocaleString('ja-JP')}</b>）。退店時のお会計には含まれません。</>
+          : <>この来店はリピーター割引の対象外です（割引は入店時の入場料に適用されます）。</>}
+      </p>
 
       <CashBox total={total} paid={paid} onPaid={setPaid} label="退店時のお会計" />
 
