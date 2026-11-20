@@ -75,16 +75,23 @@ async function TodayTab({ today, cal }: { today: string; cal: string }) {
       .where(and(eq(t.visits.storeId, ctx.storeId), eq(t.visits.businessDate, today), ne(t.visits.status, 'void')))
       .orderBy(desc(sql`greatest(${t.visits.checkedInAt}, coalesce(${t.visits.checkedOutAt}, ${t.visits.checkedInAt}))`))
       .limit(8)
-    // 翌月割引の対象（今月の来店が規定回数以上の対象性別の会員）
+    // リピーター割引の対象（割引・特典画面と同じ数え方）
+    //   今月の割引対象＝前月の来店が規定回数以上、来月の割引対象（予定）＝今月の来店が規定回数以上
+    const prevStart = `${addMonths(today.slice(0, 7), -1)}-01`
+    const prevCounts = await visitCounts(tx, ctx.storeId, prevStart, addDays(monthStart, -1))
     const counts = await visitCounts(tx, ctx.storeId, monthStart, today)
     const targets = await tx.select({ id: t.members.id }).from(t.members)
       .where(and(eq(t.members.storeId, ctx.storeId), eq(t.members.gender, settings.discountGender as '男性' | '女性'), eq(t.members.status, 'active')))
+    const eligibleNow = targets.filter((m) => (prevCounts.get(m.id) ?? 0) >= settings.discountMinVisits).length
     const eligible = targets.filter((m) => (counts.get(m.id) ?? 0) >= settings.discountMinVisits).length
     const days = monthDates(cal).map((d) => dayInfo(d, settings, overrides))
-    return { settings, week, month, recent, eligible, days }
+    return { settings, week, month, recent, eligibleNow, eligible, days }
   }, ctx)
 
   const todayRow = data.week[data.week.length - 1]
+  const mCur = +today.slice(5, 7)
+  const mPrev = +addMonths(today.slice(0, 7), -1).slice(5, 7)
+  const mNext = +addMonths(today.slice(0, 7), 1).slice(5, 7)
   const cash = data.month.total - data.month.expense - data.month.parttime
   const trend = data.week.map((r) => ({ label: `${fmtMD(r.date)}(${WEEK_JA[weekdayOf(r.date)]})`, day: r.salesDay, night: r.salesNight, total: r.total }))
 
@@ -168,11 +175,19 @@ async function TodayTab({ today, cal }: { today: string; cal: string }) {
         </Card>
 
         <Card title="リピーター特典">
-          <div className="rounded-xl border border-line px-4 py-4 text-center">
-            <p className="flex items-center justify-center gap-2 text-[13px] font-medium"><Gift className="size-5 text-brand" />翌月割引対象（今月{data.settings.discountMinVisits}回以上）</p>
-            <p className="mt-2"><span className="text-[32px] font-bold">{data.eligible}</span><span className="ml-1 text-[14px] font-bold">名</span></p>
-            <p className="mt-1 text-[11px] text-sub">{data.settings.discountGender}・翌月の入場料から{yen(data.settings.discountAmount)}引き</p>
+          <div className="grid grid-cols-2 divide-x divide-line rounded-xl border border-line py-4 text-center" data-testid="repeater-counts">
+            <div className="px-2">
+              <p className="text-[13px] font-bold">{mCur}月の割引対象</p>
+              <p className="mt-1"><span className="text-[28px] font-bold">{data.eligibleNow}</span><span className="ml-1 text-[13px] font-bold">名</span></p>
+              <p className="text-[11px] text-sub">{mPrev}月に{data.settings.discountMinVisits}回以上来店</p>
+            </div>
+            <div className="px-2">
+              <p className="text-[13px] font-bold">{mNext}月の割引対象（予定）</p>
+              <p className="mt-1"><span className="text-[28px] font-bold">{data.eligible}</span><span className="ml-1 text-[13px] font-bold">名</span></p>
+              <p className="text-[11px] text-sub">{mCur}月に{data.settings.discountMinVisits}回以上来店</p>
+            </div>
           </div>
+          <p className="mt-2 flex items-center justify-center gap-1.5 text-[11px] text-sub"><Gift className="size-4 text-brand" />{data.settings.discountGender}の会員・入場料から{yen(data.settings.discountAmount)}引き</p>
           <Link href="/discounts" className={cx(buttonCls('outline'), 'mt-4 w-full')}>対象者一覧<ChevronRight className="size-4" /></Link>
         </Card>
       </div>

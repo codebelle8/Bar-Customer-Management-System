@@ -95,8 +95,8 @@ export default async function DiscountsPage({ searchParams }: PageProps<'/discou
   const mCur = +data.month.slice(5, 7)
   const mNext = +addMonths(data.month, 1).slice(5, 7)
   const tabs: { key: ListKey; label: string; desc: string; n: number; icon: typeof Gift }[] = [
-    { key: 'current', label: '今月の割引対象', desc: `${mPrev}月に${min}回以上来店`, n: data.current.length, icon: Gift },
-    { key: 'next', label: '翌月の対象予定', desc: `${mCur}月に${min}回以上 → ${mNext}月に割引`, n: data.next.length, icon: CalendarCheck },
+    { key: 'current', label: `${mCur}月の割引対象`, desc: `${mPrev}月に${min}回以上来店`, n: data.current.length, icon: Gift },
+    { key: 'next', label: `${mNext}月の割引対象（予定）`, desc: `${mCur}月に${min}回以上来店`, n: data.next.length, icon: CalendarCheck },
     { key: 'near', label: 'あと少し', desc: `${mCur}月 あと1〜2回で対象`, n: data.near.length, icon: TrendingUp },
   ]
   const rows = data[list].filter((r) => !q || r.memberNo.toLowerCase().includes(q.toLowerCase()) || r.handle.toLowerCase().includes(q.toLowerCase()))
