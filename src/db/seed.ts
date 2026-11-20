@@ -19,8 +19,7 @@ const PRICE_TABLE: Record<DayType, Record<DayPart, Record<Category, number>>> = 
   祝日: { 昼: { 男性: 8500, 女性: 1000, カップル: 7000 }, 夜: { 男性: 12000, 女性: 2000, カップル: 10000 } },
   イベント: { 昼: { 男性: 9000, 女性: 1000, カップル: 8000 }, 夜: { 男性: 13000, 女性: 2000, カップル: 11000 } },
 }
-const MENU: { kind: 'drink' | 'extension'; name: string; price: number }[] = [
-  { kind: 'extension', name: '延長料金（1時間）', price: 3000 },
+const MENU: { kind: 'drink'; name: string; price: number }[] = [
   { kind: 'drink', name: 'ソフトドリンク', price: 500 },
   { kind: 'drink', name: 'ビール', price: 700 },
   { kind: 'drink', name: 'エナジードリンク', price: 800 },

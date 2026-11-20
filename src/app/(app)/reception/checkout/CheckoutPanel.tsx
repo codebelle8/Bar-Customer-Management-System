@@ -2,18 +2,20 @@
 // 退店・追加精算：延長料金・追加ドリンク・その他（オーナー）を加えて、未精算分をまとめて精算する
 import { useActionState, useState } from 'react'
 import { Check, ChevronDown, Hourglass, Loader2, Plus, Trash2 } from 'lucide-react'
+import type { ExtensionCharge } from '@/lib/pricing'
 import { Card, Input, cx } from '@/components/ui'
 import { checkoutAction } from '../actions'
 import { Notice } from '../_components/bits'
 import { CashBox, paidOk } from '../_components/CashBox'
-import { Stepper } from '../_components/Stepper'
 import { elapsed, parseYen } from '../_lib/quote'
 import { MenuGrid, RemoveButton, type MenuTile, type OrderedItem } from '../order/OrderPanel'
 
-export function CheckoutPanel({ visitId, unpaid, extensions, drinks, isOwner, minutes }: {
+export function CheckoutPanel({ visitId, unpaid, extension, extensionNote, drinks, isOwner, minutes }: {
   visitId: string
   unpaid: OrderedItem[]
-  extensions: MenuTile[]
+  /** 自動計算した延長料金（かからない場合は null） */
+  extension: ExtensionCharge | null
+  extensionNote: string
   drinks: MenuTile[]
   isOwner: boolean
   minutes: number
@@ -24,37 +26,31 @@ export function CheckoutPanel({ visitId, unpaid, extensions, drinks, isOwner, mi
   const [paid, setPaid] = useState('')
   const [state, action, pending] = useActionState(checkoutAction, undefined)
 
-  const menu = [...extensions, ...drinks]
+  const menu = drinks
+  const extAmount = extension?.amount ?? 0
   const added = menu.filter((m) => (cart[m.id] ?? 0) > 0).map((m) => ({ ...m, qty: cart[m.id] }))
   const otherLines = others.map((o) => ({ name: o.name.trim(), amount: parseYen(o.amount) ?? 0 }))
   const othersOk = otherLines.every((o) => o.name && o.amount > 0)
   const unpaidTotal = unpaid.reduce((a, i) => a + i.amount, 0)
-  const addedTotal = added.reduce((a, l) => a + l.price * l.qty, 0) + otherLines.reduce((a, o) => a + o.amount, 0)
+  const addedTotal = extAmount + added.reduce((a, l) => a + l.price * l.qty, 0) + otherLines.reduce((a, o) => a + o.amount, 0)
   const total = unpaidTotal + addedTotal
   const ok = othersOk && paidOk(paid, total)
   const payload = JSON.stringify({
-    visitId, items: added.map((l) => ({ menuItemId: l.id, qty: l.qty })), others: isOwner ? otherLines : [], paid: parseYen(paid),
+    visitId, items: added.map((l) => ({ menuItemId: l.id, qty: l.qty })), others: isOwner ? otherLines : [], paid: parseYen(paid), extensionAmount: extAmount,
   })
 
   return (
     <div className="space-y-5">
-      <Card title="延長料金" action={<span className="text-[12px] text-sub">滞在 {elapsed(minutes)}</span>}>
-        {extensions.length ? (
-          <div className="space-y-3">
-            {extensions.map((m) => (
-              <div key={m.id} className={cx('flex flex-wrap items-center gap-4 rounded-2xl border-2 px-4 py-3', cart[m.id] ? 'border-brand bg-brand-soft/40' : 'border-line')}>
-                <Hourglass className="size-6 text-brand" />
-                <div className="min-w-0 flex-1">
-                  <div className="text-[16px] font-bold">{m.name}</div>
-                  <div className="text-[14px] font-bold text-brand tabular-nums">¥{m.price.toLocaleString('ja-JP')}</div>
-                </div>
-                <Stepper value={cart[m.id] ?? 0} onChange={(v) => setCart({ ...cart, [m.id]: v })} label={`${m.name}の数量`} />
-              </div>
-            ))}
+      <Card title="延長料金（自動計算）" action={<span className="text-[12px] text-sub">滞在 {elapsed(minutes)}</span>}>
+        <div data-testid="extension-auto" className={cx('flex flex-wrap items-center gap-4 rounded-2xl border-2 px-4 py-3', extension ? 'border-brand bg-brand-soft/40' : 'border-line')}>
+          <Hourglass className={cx('size-6', extension ? 'text-brand' : 'text-mute')} />
+          <div className="min-w-0 flex-1">
+            <div className="text-[16px] font-bold">{extension ? extension.name : '延長料金はかかりません'}</div>
+            {extension && <div className="text-[13px] text-sub">{extension.note}</div>}
           </div>
-        ) : (
-          <p className="text-[13px] text-mute">延長料金のメニューが登録されていません</p>
-        )}
+          <div className={cx('text-[20px] font-bold tabular-nums', extension ? 'text-brand' : 'text-mute')}>¥{extAmount.toLocaleString('ja-JP')}</div>
+        </div>
+        <p className="mt-2 text-[12px] text-sub">{extensionNote}</p>
       </Card>
 
       <Card title="追加のドリンク" action={
@@ -100,6 +96,14 @@ export function CheckoutPanel({ visitId, unpaid, extensions, drinks, isOwner, mi
               <RemoveButton id={i.id} />
             </li>
           ))}
+          {extension && (
+            <li className="flex items-center gap-2 py-2">
+              <span className="w-11 shrink-0"><span className="rounded bg-[#fff3d6] px-1.5 py-0.5 text-[11px] font-bold text-[#b7791f]">延長</span></span>
+              <span className="min-w-0 flex-1 truncate">{extension.name}{extension.qty > 1 && <b className="text-brand"> ×{extension.qty}</b>}</span>
+              <span className="font-bold tabular-nums">¥{extension.amount.toLocaleString('ja-JP')}</span>
+              <span className="w-9" />
+            </li>
+          )}
           {added.map((l) => (
             <li key={l.id} className="flex items-center gap-2 py-2">
               <span className="w-11 shrink-0"><span className="rounded bg-brand-soft px-1.5 py-0.5 text-[11px] font-bold text-brand">追加</span></span>
@@ -116,7 +120,7 @@ export function CheckoutPanel({ visitId, unpaid, extensions, drinks, isOwner, mi
               <span className="w-9" />
             </li>
           ))}
-          {!unpaid.length && !added.length && !otherLines.length && (
+          {!extension && !unpaid.length && !added.length && !otherLines.length && (
             <li className="py-4 text-center text-[14px] text-sub">追加のお会計はありません（¥0 で退店できます）</li>
           )}
         </ul>

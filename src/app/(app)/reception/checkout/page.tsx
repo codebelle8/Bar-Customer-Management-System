@@ -7,6 +7,7 @@ import { Card, buttonCls, cx } from '@/components/ui'
 import * as t from '@/db/schema'
 import { query, requireCtx } from '@/lib/dal'
 import { fmtDateTime, fmtJaDate, fmtTime, jstParts } from '@/lib/format'
+import { dayInfo, extensionFor, extensionRuleText } from '@/lib/pricing'
 import { InStorePicker } from '../_components/InStorePicker'
 import { MoneyRow, Notice } from '../_components/bits'
 import { VisitHeader } from '../_components/VisitHeader'
@@ -60,6 +61,12 @@ export default async function CheckoutPage({ searchParams }: PageProps<'/recepti
   const items = visit.items.map((i) => ({ id: i.id, name: i.name, qty: i.qty, unitPrice: i.unitPrice, amount: i.amount, time: jstParts(i.createdAt).time, kind: i.kind }))
   const note = v.note.split('\n').filter((l) => !l.startsWith('【取消】')).join('\n')
   const canVoid = v.status !== 'void'&& (ctx.isOwner || v.businessDate === today.businessDate)
+  // 延長料金（昼の部のお客様が夜の部の開始を過ぎた場合）：確定時にサーバーで同じ計算をし直す
+  const extension = extensionFor({
+    settings: today.settings, dayPart: v.dayPart, businessDate: v.businessDate, day: dayInfo(v.businessDate, today.settings, today.overrides),
+    category: v.category, rules: today.rules, at: today.now,
+  })
+  const extensionNote = v.dayPart === '夜' ? '夜の部のお客様は、延長料金はかかりません' : `昼の部のお客様が${today.settings.nightStart}を過ぎて残った場合：${extensionRuleText(today.settings)}`
 
   return (
     <div className="animate-fade-in mx-auto max-w-4xl space-y-5">
@@ -87,7 +94,8 @@ export default async function CheckoutPage({ searchParams }: PageProps<'/recepti
         <CheckoutPanel
           visitId={v.id}
           unpaid={items}
-          extensions={menu.filter((m) => m.kind === 'extension')}
+          extension={extension}
+          extensionNote={extensionNote}
           drinks={menu.filter((m) => m.kind !== 'extension')}
           isOwner={ctx.isOwner}
           minutes={minutes}

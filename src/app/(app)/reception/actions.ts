@@ -8,7 +8,7 @@ import type { Tx } from '@/db/client'
 import * as t from '@/db/schema'
 import { audit, query, requireCtx } from '@/lib/dal'
 import { ageOn, yen } from '@/lib/format'
-import { discountFor } from '@/lib/pricing'
+import { dayInfo, discountFor, extensionFor } from '@/lib/pricing'
 import { PHOTO_ID_DOCS, REFERRALS, SUB_ID_DOCS } from '@/lib/terms'
 import { addYear, buildQuote } from './_lib/quote'
 import {
@@ -335,6 +335,8 @@ const CheckoutSchema = z.object({
     .array(z.object({ name: z.string().trim().min(1, 'その他の項目名を入力してください。').max(40), amount: z.number().int().min(1, 'その他の金額を入力してください。').max(1_000_000) }))
     .max(10),
   paid: money.nullable(),
+  /** 画面に表示した延長料金（確定時の計算と違う場合は確認し直してもらう） */
+  extensionAmount: money.optional(),
 })
 
 export async function checkoutAction(_prev: State, fd: FormData): Promise<ActionState> {
@@ -348,8 +350,15 @@ export async function checkoutAction(_prev: State, fd: FormData): Promise<Action
       const today = await loadToday(tx, ctx.storeId, now)
       const { v, label } = await lockVisit(tx, ctx.storeId, input.visitId)
       if (v.status !== 'in') throw new UserError(v.status === 'out' ? 'この来店はすでに精算済みです。' : 'この来店は取消されています。')
+      // 延長料金（自動計算）。画面を開いたあとに時刻の区切りをまたいだ場合は、金額を確認し直してもらう
+      const ext = extensionFor({
+        settings: today.settings, dayPart: v.dayPart, businessDate: v.businessDate, day: dayInfo(v.businessDate, today.settings, today.overrides),
+        category: v.category, rules: today.rules, at: now,
+      })
+      if (input.extensionAmount != null && input.extensionAmount !== (ext?.amount ?? 0)) throw new ExtensionChanged(ext?.amount ?? 0)
       const lines = [
-        ...(await menuLines(tx, ctx.storeId, input.items, ['extension', 'drink', 'other'])),
+        ...(ext ? [{ kind: 'extension' as const, name: ext.name, unitPrice: ext.unitPrice, qty: ext.qty, amount: ext.amount }] : []),
+        ...(await menuLines(tx, ctx.storeId, input.items, ['drink', 'other'])),
         ...input.others.map((o) => ({ kind: 'other' as const, name: o.name, unitPrice: o.amount, qty: 1, amount: o.amount })),
       ]
       if (lines.length)
@@ -366,10 +375,18 @@ export async function checkoutAction(_prev: State, fd: FormData): Promise<Action
       return `/reception/checkout?done=${v.id}${input.paid != null ? `&paid=${input.paid}` : ''}`
     }, ctx)
   } catch (e) {
+    // 最新の延長料金で画面を表示し直す（入力中の内容はそのまま）
+    if (e instanceof ExtensionChanged) revalidatePath('/reception/checkout')
     return fail(e)
   }
   revalidateAll()
   redirect(dest)
+}
+
+class ExtensionChanged extends UserError {
+  constructor(amount: number) {
+    super(`時刻が変わったため、延長料金が ${yen(amount)} になりました。金額を確認して、もう一度確定してください。`)
+  }
 }
 
 /* ------------------------------ 取消（誤って登録した来店） ------------------------------ */

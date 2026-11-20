@@ -1,7 +1,7 @@
 // 料金の判定：営業日・昼夜・曜日区分（平日／週末／祝日／イベント）・割引
 import holidayJp from '@holiday-jp/holiday_jp'
 import type { CalendarDay, Category, CustomPrices, DayPart, DayType, PriceRule, StoreSettings } from '@/db/schema'
-import { addDays, jstParts, weekdayOf } from './format'
+import { addDays, jstParts, WEEK_JA, weekdayOf, yen } from './format'
 
 export const CATEGORIES: Category[] = ['男性', '女性', 'カップル']
 export const DAY_TYPES: DayType[] = ['平日', '週末', '祝日', 'イベント']
@@ -55,6 +55,63 @@ export function priceOf(category: Category, part: DayPart, day: DayInfo, rules: 
   if (typeof custom === 'number') return custom
   const r = rules.find((x) => x.dayType === day.type && x.dayPart === part && x.category === category)
   return r?.price ?? 0
+}
+
+/** 日本時間の日付＋分（24時以降は翌日）を Date に */
+const jstAt = (date: string, minutes: number) => new Date(Date.parse(`${date}T00:00:00+09:00`) + minutes * 60000)
+
+export interface ExtensionCharge {
+  name: string
+  unitPrice: number
+  qty: number
+  amount: number
+  /** 計算の内容（画面に表示） */
+  note: string
+}
+
+type ExtensionSettings = Pick<StoreSettings, 'nightStart' | 'extensionDays' | 'extensionUnitPrice' | 'extensionCap'>
+
+/** 延長料金のルールの説明（画面に表示） */
+export function extensionRuleText(s: ExtensionSettings): string {
+  const days = [...s.extensionDays].sort().map((d) => WEEK_JA[d]).join('・')
+  const cap = s.extensionCap > 0 ? `・上限${yen(s.extensionCap)}` : ''
+  return days
+    ? `${days}は${s.nightStart}以降1時間ごとに${yen(s.extensionUnitPrice)}${cap}。それ以外の曜日と祝日は夜の部の料金`
+    : `${s.nightStart}を過ぎた場合は夜の部の料金`
+}
+
+/**
+ * 延長料金：昼の部のお客様が、夜の部の開始時刻（例 19:00）を過ぎて残った場合
+ * ・対象の曜日（例 月〜木）：夜の部の開始から時計の区切りで1時間ごと（19:02 の退店でも1時間分）。上限あり
+ * ・それ以外の曜日と祝日：夜の部の料金
+ * 夜の部のお客様には延長料金はかからない
+ */
+export function extensionFor(p: {
+  settings: ExtensionSettings
+  dayPart: DayPart
+  businessDate: string
+  day: DayInfo
+  category: Category
+  rules: PriceRule[]
+  at: Date
+}): ExtensionCharge | null {
+  const s = p.settings
+  if (p.dayPart !== '昼') return null
+  const over = Math.floor((p.at.getTime() - jstAt(p.businessDate, toMin(s.nightStart)).getTime()) / 60000)
+  if (over <= 0) return null
+  const wd = weekdayOf(p.businessDate)
+  if (s.extensionDays.includes(wd) && p.day.type !== '祝日' && p.day.type !== '週末') {
+    if (s.extensionUnitPrice <= 0) return null
+    const hours = Math.ceil(over / 60)
+    const full = hours * s.extensionUnitPrice
+    if (s.extensionCap > 0 && full >= s.extensionCap)
+      return { name: `延長料金（${s.nightStart}以降・上限）`, unitPrice: s.extensionCap, qty: 1, amount: s.extensionCap, note: `${s.nightStart}以降 ${hours}時間（上限 ${yen(s.extensionCap)}）` }
+    return { name: `延長料金（${s.nightStart}以降）`, unitPrice: s.extensionUnitPrice, qty: hours, amount: full, note: `${s.nightStart}以降 ${hours}時間 × ${yen(s.extensionUnitPrice)}` }
+  }
+  const fee = priceOf(p.category, '夜', p.day, p.rules)
+  if (fee <= 0) return null
+  const dayLabel = p.day.type === '祝日' ? '祝日' : `${WEEK_JA[wd]}曜日`
+  return { name: '夜の部の料金（延長）', unitPrice: fee, qty: 1, amount: fee, note: `${dayLabel}は時間ごとの延長料金の対象外のため、夜の部の料金（${p.category}）` }
 }
 
 /** リピーター割引：前月の来店回数が規定回数以上の対象性別の会員は、当月の入場料から割引 */

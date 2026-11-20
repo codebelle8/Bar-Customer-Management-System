@@ -81,6 +81,35 @@ export async function saveHours(_prev: ActionState, fd: FormData): Promise<Actio
   return { ok: true, message: '営業時間・曜日区分を保存しました' }
 }
 
+/* ------------------------------ 延長料金 ------------------------------ */
+
+const extensionSchema = z.object({
+  extensionDays: z.array(z.coerce.number().int().min(0).max(6)).max(7),
+  extensionUnitPrice: z.coerce.number({ error: '1時間あたりの金額を入力してください' }).int('金額は整数で入力してください').min(0).max(MAX_PRICE),
+  extensionCap: z.coerce.number({ error: '上限の金額を入力してください' }).int('金額は整数で入力してください').min(0).max(MAX_PRICE),
+})
+
+export async function saveExtension(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  const ctx = await requireOwner()
+  const p = extensionSchema.safeParse({
+    extensionDays: fd.getAll('extensionDays').map(String),
+    extensionUnitPrice: str(fd, 'extensionUnitPrice'),
+    extensionCap: str(fd, 'extensionCap'),
+  })
+  if (!p.success) return { error: zodMessage(p.error) }
+  const extensionDays = [...new Set(p.data.extensionDays)].sort()
+  await query(async (tx) => {
+    await tx
+      .update(t.storeSettings)
+      .set({ extensionDays, extensionUnitPrice: p.data.extensionUnitPrice, extensionCap: p.data.extensionCap, updatedAt: new Date() })
+      .where(eq(t.storeSettings.storeId, ctx.storeId))
+    const W = ['日', '月', '火', '水', '木', '金', '土']
+    await audit(tx, ctx, '延長料金を変更', `${extensionDays.map((d) => W[d]).join('') || 'なし'}・1時間${yen(p.data.extensionUnitPrice)}・上限${p.data.extensionCap ? yen(p.data.extensionCap) : 'なし'}`)
+  }, ctx)
+  revalidatePath('/pricing')
+  return { ok: true, message: '延長料金を保存しました' }
+}
+
 /* ------------------------------ 料金カレンダー ------------------------------ */
 
 const MAX_RANGE = 31
@@ -151,7 +180,7 @@ export async function saveCalendarDay(_prev: ActionState, fd: FormData): Promise
 
 const menuSchema = z.object({
   id: z.uuid().optional(),
-  kind: z.enum(['drink', 'extension', 'other'], '種類を選択してください'),
+  kind: z.enum(['drink', 'other'], '種類を選択してください'),
   name: z.string().min(1, 'メニュー名を入力してください').max(40, 'メニュー名は40文字以内で入力してください'),
   price: z.number('金額を入力してください').int('金額は整数で入力してください').min(0, '金額は0円以上にしてください').max(MAX_PRICE, '金額が大きすぎます'),
   sort: z.number().int().min(0).max(9999),

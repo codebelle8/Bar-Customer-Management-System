@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { asc, eq } from 'drizzle-orm'
-import { CalendarDays, ChevronRight, Clock, Info, MousePointerClick, Plus, Trash2 } from 'lucide-react'
+import { CalendarDays, ChevronRight, Clock, Hourglass, Info, MousePointerClick, Plus, Trash2 } from 'lucide-react'
 import { CalendarLegend, PriceCalendar } from '@/components/PriceCalendar'
 import { Badge, Card, Empty, Field, Input, Select, Td, Th, buttonCls, cx } from '@/components/ui'
 import { ActionForm, FormMessage, SubmitButton } from '@/components/settings/form'
@@ -10,8 +10,8 @@ import * as t from '@/db/schema'
 import type { CalendarDay, Category, DayPart, DayType, MenuItem, PriceRule, StoreSettings } from '@/db/schema'
 import { loadPricing, query, requireOwner } from '@/lib/dal'
 import { fmtJaDate, monthDates, WEEK_JA, yen } from '@/lib/format'
-import { businessDateOf, CATEGORIES, DAY_PARTS, DAY_TYPE_STYLE, DAY_TYPES, dayInfo, holidayName, priceOf, type DayInfo } from '@/lib/pricing'
-import { saveCalendarDay, saveHours, saveMenuItem, savePriceRules } from './actions'
+import { businessDateOf, CATEGORIES, DAY_PARTS, DAY_TYPE_STYLE, DAY_TYPES, dayInfo, extensionRuleText, holidayName, priceOf, type DayInfo } from '@/lib/pricing'
+import { saveCalendarDay, saveExtension, saveHours, saveMenuItem, savePriceRules } from './actions'
 import { DayFields, type PriceTable } from './DayFields'
 import { ScrollIntoView } from './ScrollIntoView'
 
@@ -20,7 +20,7 @@ export const metadata: Metadata = { title: '料金設定・カレンダー' }
 const TABS = [
   { key: 'table', label: '料金表・営業時間' },
   { key: 'calendar', label: '料金カレンダー' },
-  { key: 'menu', label: 'ドリンク・延長メニュー' },
+  { key: 'menu', label: 'ドリンクメニュー' },
 ] as const
 type TabKey = (typeof TABS)[number]['key']
 
@@ -133,6 +133,9 @@ function TableTab({ settings, rules, overrides, today }: { settings: StoreSettin
         <Card title="営業時間・曜日区分">
           <HoursForm settings={settings} />
         </Card>
+        <Card title="延長料金（退店時に自動計算）">
+          <ExtensionForm settings={settings} />
+        </Card>
       </div>
     </div>
   )
@@ -202,6 +205,39 @@ function HoursForm({ settings }: { settings: StoreSettings }) {
         <p className="mt-1.5 text-[11px] text-mute">選んだ曜日は「週末料金」になります（祝日・カレンダーの個別設定が優先）。</p>
       </div>
       <SubmitButton>営業時間を保存</SubmitButton>
+    </ActionForm>
+  )
+}
+
+/** 延長料金のルール：昼の部のお客様が夜の部の開始を過ぎて残った場合に、退店時に自動で加算 */
+function ExtensionForm({ settings }: { settings: StoreSettings }) {
+  return (
+    <ActionForm action={saveExtension} className="space-y-4">
+      <p className="flex gap-2 rounded-lg bg-page px-3 py-2 text-[12px] leading-relaxed text-sub">
+        <Hourglass className="mt-0.5 size-4 shrink-0 text-brand" />
+        <span>昼の部のお客様が {settings.nightStart} を過ぎて残った場合に、退店時に自動で加算します。夜の部のお客様にはかかりません。<br />現在の設定：{extensionRuleText(settings)}</span>
+      </p>
+      <div>
+        <p className="mb-1.5 text-[12px] font-medium text-sub">1時間ごとに加算する曜日</p>
+        <div className="flex flex-wrap gap-1.5">
+          {WEEK_JA.map((w, i) => (
+            <label key={w} className="cursor-pointer">
+              <input type="checkbox" name="extensionDays" value={i} defaultChecked={settings.extensionDays.includes(i)} className="peer sr-only" />
+              <span className={cx(
+                'flex size-10 items-center justify-center rounded-full border border-line bg-white text-[14px] font-bold transition select-none peer-checked:border-brand peer-checked:bg-brand-soft peer-focus-visible:ring-2 peer-focus-visible:ring-brand/30',
+                i === 0 && 'text-up', i === 6 && 'text-info',
+              )}>{w}</span>
+            </label>
+          ))}
+        </div>
+        <p className="mt-1.5 text-[11px] text-mute">選ばなかった曜日と祝日は、延長した場合に夜の部の料金をいただきます。</p>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="1時間あたり"><YenInput name="extensionUnitPrice" defaultValue={settings.extensionUnitPrice} required /></Field>
+        <Field label="上限（0は上限なし）"><YenInput name="extensionCap" defaultValue={settings.extensionCap} required /></Field>
+      </div>
+      <p className="text-[11px] text-mute">時間は時計の区切りで数えます（例：{settings.nightStart}を過ぎて2分で退店しても1時間分）。</p>
+      <SubmitButton>延長料金を保存</SubmitButton>
     </ActionForm>
   )
 }
@@ -313,7 +349,7 @@ function DayPanel({ date, settings, rules, overrides }: { date: string; settings
 /* ------------------------------ ドリンク・延長メニュー ------------------------------ */
 
 const KIND_LABEL: Record<MenuItem['kind'], string> = { extension: '延長', drink: 'ドリンク', other: 'その他' }
-const KIND_ORDER: MenuItem['kind'][] = ['extension', 'drink', 'other']
+const KIND_ORDER: MenuItem['kind'][] = ['drink', 'other']
 
 function KindSelect({ value }: { value?: MenuItem['kind'] }) {
   return (

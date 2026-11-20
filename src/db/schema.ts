@@ -39,6 +39,10 @@ export const storeSettings = pgTable('store_settings', {
   nightStart: text('night_start').notNull().default('19:00'),
   dayCutoff: text('day_cutoff').notNull().default('06:00'),
   weekendDays: jsonb('weekend_days').$type<number[]>().notNull().default([0, 6]),
+  /** 延長料金：対象の曜日（0=日〜6=土）は夜の部の開始から1時間ごとに加算（上限あり）。それ以外の曜日・祝日は夜の部の料金 */
+  extensionDays: jsonb('extension_days').$type<number[]>().notNull().default([1, 2, 3, 4]),
+  extensionUnitPrice: integer('extension_unit_price').notNull().default(1000),
+  extensionCap: integer('extension_cap').notNull().default(10000),
   joinFee: integer('join_fee').notNull().default(0),
   annualFeeEnabled: boolean('annual_fee_enabled').notNull().default(false),
   annualFee: integer('annual_fee').notNull().default(0),
