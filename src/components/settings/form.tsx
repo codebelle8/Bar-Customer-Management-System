@@ -5,6 +5,7 @@
 import { createContext, startTransition, useActionState, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Check, CircleAlert, Copy } from 'lucide-react'
 import { Button, cx } from '@/components/ui'
+import { confirmDialog } from '@/components/confirm'
 import type { ActionState } from './types'
 
 type Act = (prev: ActionState, fd: FormData) => Promise<ActionState>
@@ -41,9 +42,10 @@ export function ActionForm({
           e.preventDefault()
           const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLElement | null
           const msg = submitter?.dataset.confirm ?? confirmText
-          if (msg && !window.confirm(msg)) return
           const fd = new FormData(e.currentTarget, submitter)
-          startTransition(() => dispatch(fd))
+          if (!msg) return startTransition(() => dispatch(fd))
+          // 確認は画面内のメッセージで出す（「はい」を押したときだけ送信）
+          void confirmDialog(msg).then((ok) => ok && startTransition(() => dispatch(fd)))
         }}
       >
         {children}

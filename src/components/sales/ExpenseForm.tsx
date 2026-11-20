@@ -5,6 +5,7 @@ import { Loader2, Plus, Trash2 } from 'lucide-react'
 import { addExpense, deleteExpense, type ExpenseState } from '@/app/(app)/sales/actions'
 import { Button, Field, Input, cx } from '@/components/ui'
 import { AMOUNT_MAX, EXPENSE_KINDS, type ExpenseKind } from './constants'
+import { alertDialog, confirmDialog } from '@/components/confirm'
 
 /** 経費・税金・アルバイトの入力フォーム */
 export function ExpenseForm({ date }: { date: string }) {
@@ -50,11 +51,11 @@ export function DeleteExpenseButton({ id, label }: { id: string; label: string }
   const [pending, start] = useTransition()
   return (
     <button type="button" disabled={pending} aria-label={`${label}を削除`}
-      onClick={() => {
-        if (!confirm(`「${label}」を削除しますか？`)) return
+      onClick={async () => {
+        if (!(await confirmDialog(`「${label}」を削除しますか？`))) return
         start(async () => {
           const r = await deleteExpense(id)
-          if (r.error) alert(r.error)
+          if (r.error) void alertDialog(r.error)
         })
       }}
       className="inline-flex size-9 items-center justify-center rounded-lg border border-[#f2c2cb] bg-white text-up transition hover:bg-[#fff4f6] disabled:opacity-50">

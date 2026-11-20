@@ -4,6 +4,7 @@ import { useActionState, useState, startTransition } from 'react'
 import { Ban, LoaderCircle, RotateCcw, ShieldCheck, UserMinus } from 'lucide-react'
 import { setMemberStatus, type FormState } from '@/app/(app)/members/actions'
 import { Button, Textarea } from '@/components/ui'
+import { confirmDialog } from '@/components/confirm'
 import type { MemberStatus } from './rules'
 import { FieldError } from './IdDocsField'
 
@@ -21,7 +22,7 @@ export function StatusActions({ id, status, isOwner, label }: { id: string; stat
     startTransition(() => dispatch(fd))
   }
   const confirmRun = (op: Op, message: string) => {
-    if (window.confirm(message)) run(op)
+    void confirmDialog(message).then((ok) => ok && run(op))
   }
 
   return (

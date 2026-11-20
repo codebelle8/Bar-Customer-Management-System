@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { cookies } from 'next/headers'
 import { and, count, eq, lte, ne } from 'drizzle-orm'
+import { ConfirmHost } from '@/components/confirm'
 import { Sidebar, Topbar, type Notice } from '@/components/shell'
 import * as t from '@/db/schema'
 import { query, requireCtx } from '@/lib/dal'
@@ -48,6 +49,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         />
         <main className="flex-1 px-4 py-6 lg:px-8">{children}</main>
       </div>
+      <ConfirmHost />
     </div>
   )
 }
