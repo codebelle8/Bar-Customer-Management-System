@@ -60,7 +60,7 @@ export default async function OrderPage({ searchParams }: PageProps<'/reception/
       <VisitHeader
         memberNo={visit.memberNo} handle={visit.handle} partnerNo={visit.partnerNo} partnerHandle={visit.partnerHandle} category={v.category}
         time={jstParts(v.checkedInAt).time} minutes={Math.round((today.now.getTime() - v.checkedInAt.getTime()) / 60000)}
-        businessDate={v.businessDate} today={today.businessDate} status={v.status} isNew={v.isNew}
+        businessDate={v.businessDate} today={today.businessDate} status={v.status} auto={v.autoCheckout} isNew={v.isNew}
         action={v.status === 'in' && (
           <Link href={`/reception/checkout?visit=${v.id}`} className={cx(buttonCls('outline', 'lg'), 'h-14')}><ReceiptText className="size-5" />退店・精算へ</Link>
         )}

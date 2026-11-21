@@ -11,6 +11,7 @@ import { Pager } from '@/components/members/Pager'
 import { STATUS_LABEL, STATUS_TONE } from '@/components/members/rules'
 import { StatusActions } from '@/components/members/StatusActions'
 import { Badge, Card, Empty, Td, Th, buttonCls, cx } from '@/components/ui'
+import { VisitStatusBadge } from '@/components/VisitStatusBadge'
 import * as t from '@/db/schema'
 import { query, requireCtx } from '@/lib/dal'
 import { addDays, addMonths, ageOn, diffDays, fmtDate, fmtDateTime, fmtJaMonth, fmtTime, jstParts, num, WEEK_JA, weekdayOf, yen } from '@/lib/format'
@@ -319,9 +320,9 @@ export default async function MemberDetailPage({ params, searchParams }: PagePro
                         </Td>
                         <Td className="text-right font-bold">
                           {yen(v.entryTotal + extra)}
-                          <span className="mt-1 block xl:hidden"><VisitBadge status={v.status} /></span>
+                          <span className="mt-1 block xl:hidden"><VisitStatusBadge status={v.status} auto={v.autoCheckout} /></span>
                         </Td>
-                        <Td className="hidden xl:table-cell"><VisitBadge status={v.status} /></Td>
+                        <Td className="hidden xl:table-cell"><VisitStatusBadge status={v.status} auto={v.autoCheckout} /></Td>
                       </tr>
                     )
                   })}
@@ -348,10 +349,6 @@ export default async function MemberDetailPage({ params, searchParams }: PagePro
       </div>
     </div>
   )
-}
-
-function VisitBadge({ status }: { status: 'in' | 'out' | 'void' }) {
-  return status === 'in' ? <Badge tone="blue">入店中</Badge> : status === 'out' ? <Badge tone="green">精算済</Badge> : <Badge tone="gray">取消</Badge>
 }
 
 function memberFor(days: number) {

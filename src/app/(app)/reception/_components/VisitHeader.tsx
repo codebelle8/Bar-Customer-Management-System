@@ -2,6 +2,7 @@
 import type { ReactNode } from 'react'
 import { Clock } from 'lucide-react'
 import { Badge } from '@/components/ui'
+import { VisitStatusBadge } from '@/components/VisitStatusBadge'
 import { fmtMD } from '@/lib/format'
 import { elapsed } from '../_lib/quote'
 import { GenderBadge } from './bits'
@@ -17,6 +18,8 @@ export function VisitHeader(p: {
   businessDate: string
   today: string
   status: 'in' | 'out' | 'void'
+  /** 自動退店した来店 */
+  auto?: boolean
   isNew: boolean
   action?: ReactNode
 }) {
@@ -28,7 +31,7 @@ export function VisitHeader(p: {
           <span className="truncate text-[24px] font-bold" data-testid="visit-handle">{p.handle}</span>
           <GenderBadge gender={p.category} />
           {p.isNew && <Badge tone="purple">新規</Badge>}
-          {p.status === 'in' ? <Badge tone="blue">入店中</Badge> : p.status === 'out' ? <Badge tone="green">精算済</Badge> : <Badge tone="gray">取消</Badge>}
+          <VisitStatusBadge status={p.status} auto={p.auto} />
         </div>
         {p.partnerHandle && <p className="mt-0.5 truncate text-[14px] text-sub">＋ {p.partnerNo} {p.partnerHandle}</p>}
       </div>

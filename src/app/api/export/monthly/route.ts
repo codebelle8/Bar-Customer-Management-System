@@ -213,7 +213,7 @@ function visitSheet(visits: { v: t.Visit; memberNo: string; handle: string; part
     yenCell(v.annualFee),
     yenCell(m.extra),
     yenCell(v.entryTotal + m.extra),
-    STATUS[v.status],
+    v.status === 'out' && v.autoCheckout ? '自動退店' : STATUS[v.status],
   ])
   const ws = XLSX.utils.aoa_to_sheet([head, ...body])
   ws['!cols'] = [11, 7, 7, 10, 30, 8, 5, 9, 9, 8, 8, 8, 9, 10, 8].map((wch) => ({ wch }))

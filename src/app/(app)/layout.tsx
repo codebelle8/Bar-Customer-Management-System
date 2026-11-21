@@ -4,8 +4,9 @@ import { and, count, eq, lte, ne } from 'drizzle-orm'
 import { ConfirmHost } from '@/components/confirm'
 import { Sidebar, Topbar, type Notice } from '@/components/shell'
 import * as t from '@/db/schema'
+import { autoCheckout } from '@/lib/autoCheckout'
 import { query, requireCtx } from '@/lib/dal'
-import { addDays, fmtJaDate } from '@/lib/format'
+import { addDays, fmtJaDate, fmtMD } from '@/lib/format'
 import { businessDateOf } from '@/lib/pricing'
 import { ROLE_LABEL } from '@/lib/roles'
 import { THEME_COOKIE, parseThemePref } from '@/lib/theme'
@@ -16,12 +17,20 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const { today, notices } = await query(async (tx) => {
     const [s] = await tx.select().from(t.storeSettings).where(eq(t.storeSettings.storeId, ctx.storeId))
     const today = businessDateOf(new Date(), s)
+    // 退店処理がないまま営業日の区切りを過ぎた来店は、自動で退店にする（入店中の数を数える前に）
+    await autoCheckout(tx, ctx.storeId, s)
     const notices: Notice[] = []
     const [{ inside }] = await tx
       .select({ inside: count() })
       .from(t.visits)
       .where(and(eq(t.visits.storeId, ctx.storeId), eq(t.visits.status, 'in')))
     if (inside) notices.push({ text: `入店中のお客様：${inside}組（退店時に追加精算があれば入力してください）`, href: '/reception' })
+    const prev = addDays(today, -1)
+    const [{ auto }] = await tx
+      .select({ auto: count() })
+      .from(t.visits)
+      .where(and(eq(t.visits.storeId, ctx.storeId), eq(t.visits.businessDate, prev), eq(t.visits.status, 'out'), eq(t.visits.autoCheckout, true)))
+    if (auto) notices.push({ text: `自動退店：前営業日（${fmtMD(prev)}）に退店処理がなかった${auto}組を、${s.dayCutoff}に自動で退店にしました`, href: `/dashboard?tab=visits&date=${prev}` })
     if (s.annualFeeEnabled) {
       const [{ due }] = await tx
         .select({ due: count() })

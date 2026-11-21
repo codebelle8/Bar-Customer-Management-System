@@ -130,6 +130,8 @@ export const visits = pgTable('visits', {
   staffId: uuid('staff_id').references(() => users.id),
   outStaffId: uuid('out_staff_id').references(() => users.id),
   note: text('note').notNull().default(''),
+  /** 退店処理がないまま営業日の区切りを過ぎ、自動で退店にした来店 */
+  autoCheckout: boolean('auto_checkout').notNull().default(false),
 })
 
 export const visitItems = pgTable('visit_items', {

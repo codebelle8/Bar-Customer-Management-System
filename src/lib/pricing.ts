@@ -60,6 +60,11 @@ export function priceOf(category: Category, part: DayPart, day: DayInfo, rules: 
 /** 日本時間の日付＋分（24時以降は翌日）を Date に */
 const jstAt = (date: string, minutes: number) => new Date(Date.parse(`${date}T00:00:00+09:00`) + minutes * 60000)
 
+/** 営業日の終わり＝翌日の区切り時刻（例：11/20 の営業日 → 11/21 6:00） */
+export function businessDayEnd(businessDate: string, s: Pick<StoreSettings, 'dayCutoff'>): Date {
+  return jstAt(addDays(businessDate, 1), toMin(s.dayCutoff))
+}
+
 export interface ExtensionCharge {
   name: string
   unitPrice: number

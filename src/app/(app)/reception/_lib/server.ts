@@ -5,6 +5,7 @@ import { alias } from 'drizzle-orm/pg-core'
 import type { Tx } from '@/db/client'
 import * as t from '@/db/schema'
 import type { Category, DayPart, StoreSettings } from '@/db/schema'
+import { autoCheckout } from '@/lib/autoCheckout'
 import { loadPricing } from '@/lib/dal'
 import { addDays, addMonths, ageOn, jstParts } from '@/lib/format'
 import { businessDateOf, CATEGORIES, DAY_PARTS, dayInfo, dayPartOf, discountFor, priceOf } from '@/lib/pricing'
@@ -22,6 +23,8 @@ export const PART_LABEL: Record<DayPart, string> = { 昼: '昼の部', 夜: '夜
 /** 現在時刻の営業日・昼夜・料金区分・料金 */
 export async function loadToday(tx: Tx, storeId: string, now = new Date()) {
   const { settings, rules, overrides } = await loadPricing(tx, storeId)
+  // 退店処理がないまま営業日の区切りを過ぎた来店は、先に自動で退店にする（入店中一覧・注文・精算に出さない）
+  await autoCheckout(tx, storeId, settings, now)
   const businessDate = businessDateOf(now, settings)
   const part = dayPartOf(now, settings)
   const day = dayInfo(businessDate, settings, overrides)

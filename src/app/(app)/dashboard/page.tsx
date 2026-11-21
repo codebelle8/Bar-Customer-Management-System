@@ -5,8 +5,10 @@ import { alias } from 'drizzle-orm/pg-core'
 import { Banknote, ChevronRight, CircleDollarSign, Coins, FileText, Gift, GlassWater, Plus, ReceiptText, Search, Settings, Users } from 'lucide-react'
 import { SalesTrendChart, Legend } from '@/components/charts'
 import { CalendarLegend, PriceCalendar } from '@/components/PriceCalendar'
+import { VisitStatusBadge } from '@/components/VisitStatusBadge'
 import { Badge, Card, Empty, Kpi, Td, Th, buttonCls, cx } from '@/components/ui'
 import * as t from '@/db/schema'
+import { autoCheckout } from '@/lib/autoCheckout'
 import { loadPricing, query, requireCtx } from '@/lib/dal'
 import { addDays, addMonths, fmtJaMonth, fmtMD, fmtTime, monthDates, num, pct, WEEK_JA, weekdayOf, yen } from '@/lib/format'
 import { businessDateOf, dayInfo } from '@/lib/pricing'
@@ -31,6 +33,7 @@ export default async function DashboardPage({ searchParams }: PageProps<'/dashbo
   const tab = tabs.some((x) => x.key === sp.tab) ? (sp.tab as (typeof TABS)[number]['key']) : 'today'
   const today = await query(async (tx) => {
     const [s] = await tx.select().from(t.storeSettings).where(eq(t.storeSettings.storeId, ctx.storeId))
+    await autoCheckout(tx, ctx.storeId, s)
     return businessDateOf(new Date(), s)
   }, ctx)
   return (
@@ -311,7 +314,7 @@ async function VisitsTab({ today, date }: { today: string; date: string }) {
                   <Td className="text-right">{v.joinFee + v.annualFee ? yen(v.joinFee + v.annualFee) : '—'}</Td>
                   <Td className="text-right">{r.extra ? yen(r.extra) : '—'}</Td>
                   <Td className="text-right font-bold">{yen(v.entryTotal + r.extra)}</Td>
-                  <Td>{v.status === 'in' ? <Badge tone="blue">入店中</Badge> : v.status === 'out' ? <Badge tone="green">精算済</Badge> : <Badge tone="gray">取消</Badge>}</Td>
+                  <Td><VisitStatusBadge status={v.status} auto={v.autoCheckout} /></Td>
                   <Td className="text-sub">{r.staffName ?? '—'}</Td>
                 </tr>
               ))}

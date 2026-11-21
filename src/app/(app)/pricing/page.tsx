@@ -187,7 +187,7 @@ function HoursForm({ settings }: { settings: StoreSettings }) {
       </div>
       <p className="flex gap-2 rounded-lg bg-page px-3 py-2 text-[12px] leading-relaxed text-sub">
         <Clock className="mt-0.5 size-4 shrink-0 text-brand" />
-        <span>昼の部は {settings.dayStart}〜{settings.nightStart}、それ以外（深夜を含む）は夜の部です。{settings.dayCutoff} より前の来店・売上は前日の営業日として集計します。</span>
+        <span>昼の部は {settings.dayStart}〜{settings.nightStart}、それ以外（深夜を含む）は夜の部です。{settings.dayCutoff} より前の来店・売上は前日の営業日として集計します。この時刻を過ぎても入店中のままの来店は、自動で退店になります（延長料金などは加算しません）。</span>
       </p>
       <div>
         <p className="mb-1.5 text-[12px] font-medium text-sub">週末料金の曜日</p>

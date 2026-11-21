@@ -126,6 +126,7 @@ export default async function ReceptionPage({ searchParams }: PageProps<'/recept
           </dl>
           <p className="mt-4 text-[13px] leading-relaxed text-sub">
             退店時は「退店・精算」から延長料金・ドリンクを精算してください。追加がない場合も ¥0 で退店処理を行うと、入店中一覧から外れます。
+            退店処理をしないまま営業日の区切り（{s.dayCutoff}）を過ぎた来店は、自動で退店になります（延長料金などは加算されません）。
           </p>
           {rows.some((r) => r.stale) && (
             <Notice tone="warn" className="mt-3">前営業日以前から入店中のままの来店があります。退店処理の漏れがないか確認してください。</Notice>

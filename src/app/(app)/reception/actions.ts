@@ -349,7 +349,12 @@ export async function checkoutAction(_prev: State, fd: FormData): Promise<Action
       const now = new Date()
       const today = await loadToday(tx, ctx.storeId, now)
       const { v, label } = await lockVisit(tx, ctx.storeId, input.visitId)
-      if (v.status !== 'in') throw new UserError(v.status === 'out' ? 'この来店はすでに精算済みです。' : 'この来店は取消されています。')
+      if (v.status !== 'in')
+        throw new UserError(
+          v.status === 'void' ? 'この来店は取消されています。'
+            : v.autoCheckout ? `この来店は、営業日の区切り（${today.settings.dayCutoff}）を過ぎたため自動で退店になっています。`
+              : 'この来店はすでに精算済みです。',
+        )
       // 延長料金（自動計算）。画面を開いたあとに時刻の区切りをまたいだ場合は、金額を確認し直してもらう
       const ext = extensionFor({
         settings: today.settings, dayPart: v.dayPart, businessDate: v.businessDate, day: dayInfo(v.businessDate, today.settings, today.overrides),

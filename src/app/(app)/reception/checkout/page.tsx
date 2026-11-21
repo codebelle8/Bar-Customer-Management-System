@@ -73,7 +73,7 @@ export default async function CheckoutPage({ searchParams }: PageProps<'/recepti
       <Link href="/reception/checkout" className="inline-flex items-center gap-1.5 text-[14px] font-bold text-brand"><ArrowLeft className="size-4" />お客様を選び直す</Link>
       <VisitHeader
         memberNo={visit.memberNo} handle={visit.handle} partnerNo={visit.partnerNo} partnerHandle={visit.partnerHandle} category={v.category}
-        time={jstParts(v.checkedInAt).time} minutes={minutes} businessDate={v.businessDate} today={today.businessDate} status={v.status} isNew={v.isNew}
+        time={jstParts(v.checkedInAt).time} minutes={minutes} businessDate={v.businessDate} today={today.businessDate} status={v.status} auto={v.autoCheckout} isNew={v.isNew}
         action={v.status === 'in' && (
           <Link href={`/reception/order?visit=${v.id}`} className={cx(buttonCls('outline', 'lg'), 'h-14')}><GlassWater className="size-5" />ドリンク注文</Link>
         )}
@@ -104,11 +104,16 @@ export default async function CheckoutPage({ searchParams }: PageProps<'/recepti
           minutes={minutes}
         />
       ) : (
-        <Card title={v.status === 'out' ? '退店・精算済み' : '取消済み'}>
+        <Card title={v.status === 'out' ? (v.autoCheckout ? '自動退店' : '退店・精算済み') : '取消済み'}>
+          {v.status === 'out' && v.autoCheckout && (
+            <Notice tone="warn" className="mb-3">
+              退店処理がないまま営業日の区切り（{fmtTime(v.checkedOutAt)}）を過ぎたため、自動で退店にしました。延長料金などは加算していません。
+            </Notice>
+          )}
           {v.status === 'out' && (
             <div className="divide-y divide-line">
               {items.map((i) => <MoneyRow key={i.id} label={`${i.name}${i.qty > 1 ? ` ×${i.qty}` : ''}`} amount={i.amount} note={i.time} />)}
-              <MoneyRow label={`退店時 精算額（${fmtTime(v.checkedOutAt)} 退店）`} amount={v.extraTotal} strong />
+              <MoneyRow label={v.autoCheckout ? `滞在中の注文（${fmtTime(v.checkedOutAt)} 自動退店）` : `退店時 精算額（${fmtTime(v.checkedOutAt)} 退店）`} amount={v.extraTotal} strong />
             </div>
           )}
           {v.status === 'void' && <p className="text-[14px] whitespace-pre-wrap text-sub">{v.note}</p>}
