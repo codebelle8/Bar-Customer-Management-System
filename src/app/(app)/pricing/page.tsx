@@ -220,17 +220,23 @@ function ExtensionForm({ settings }: { settings: StoreSettings }) {
       <div>
         <p className="mb-1.5 text-[12px] font-medium text-sub">1時間ごとに加算する曜日</p>
         <div className="flex flex-wrap gap-1.5">
-          {WEEK_JA.map((w, i) => (
-            <label key={w} className="cursor-pointer">
-              <input type="checkbox" name="extensionDays" value={i} defaultChecked={settings.extensionDays.includes(i)} className="peer sr-only" />
-              <span className={cx(
-                'flex size-10 items-center justify-center rounded-full border border-line bg-white text-[14px] font-bold transition select-none peer-checked:border-brand peer-checked:bg-brand-soft peer-focus-visible:ring-2 peer-focus-visible:ring-brand/30',
-                i === 0 && 'text-up', i === 6 && 'text-info',
-              )}>{w}</span>
-            </label>
-          ))}
+          {WEEK_JA.map((w, i) => {
+            const weekend = settings.weekendDays.includes(i)
+            return (
+              <label key={w} className={weekend ? 'cursor-not-allowed' : 'cursor-pointer'} title={weekend ? '週末の曜日は夜の部の料金になります' : undefined}>
+                <input type="checkbox" name="extensionDays" value={i} disabled={weekend} defaultChecked={!weekend && settings.extensionDays.includes(i)} className="peer sr-only" />
+                <span className={cx(
+                  'flex size-10 items-center justify-center rounded-full border border-line bg-white text-[14px] font-bold transition select-none peer-checked:border-brand peer-checked:bg-brand-soft peer-focus-visible:ring-2 peer-focus-visible:ring-brand/30',
+                  i === 0 && 'text-up', i === 6 && 'text-info', weekend && 'opacity-35',
+                )}>{w}</span>
+              </label>
+            )
+          })}
         </div>
-        <p className="mt-1.5 text-[11px] text-mute">選ばなかった曜日と祝日は、延長した場合に夜の部の料金をいただきます。</p>
+        <p className="mt-1.5 text-[11px] text-mute">
+          週末の曜日（{settings.weekendDays.length ? [...settings.weekendDays].sort().map((d) => WEEK_JA[d]).join('・') : 'なし'}。上の「週末料金の曜日」で変更）は選べません。
+          選ばなかった曜日・週末の曜日・祝日（カレンダーで週末・祝日にした日を含む）は、延長した場合に夜の部の料金をいただきます。
+        </p>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <Field label="1時間あたり"><YenInput name="extensionUnitPrice" defaultValue={settings.extensionUnitPrice} required /></Field>

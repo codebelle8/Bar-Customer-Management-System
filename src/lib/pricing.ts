@@ -74,11 +74,11 @@ export interface ExtensionCharge {
   note: string
 }
 
-type ExtensionSettings = Pick<StoreSettings, 'nightStart' | 'extensionDays' | 'extensionUnitPrice' | 'extensionCap'>
+type ExtensionSettings = Pick<StoreSettings, 'nightStart' | 'weekendDays' | 'extensionDays' | 'extensionUnitPrice' | 'extensionCap'>
 
-/** 延長料金のルールの説明（画面に表示） */
+/** 延長料金のルールの説明（画面に表示）。週末の曜日は1時間ごとの対象にならないため含めない */
 export function extensionRuleText(s: ExtensionSettings): string {
-  const days = [...s.extensionDays].sort().map((d) => WEEK_JA[d]).join('・')
+  const days = [...s.extensionDays].filter((d) => !s.weekendDays.includes(d)).sort().map((d) => WEEK_JA[d]).join('・')
   const cap = s.extensionCap > 0 ? `・上限${yen(s.extensionCap)}` : ''
   return days
     ? `${days}は${s.nightStart}以降1時間ごとに${yen(s.extensionUnitPrice)}${cap}。それ以外の曜日と祝日は夜の部の料金`
@@ -88,7 +88,7 @@ export function extensionRuleText(s: ExtensionSettings): string {
 /**
  * 延長料金：昼の部のお客様が、夜の部の開始時刻（例 19:00）を過ぎて残った場合
  * ・対象の曜日（例 月〜木）：夜の部の開始から時計の区切りで1時間ごと（19:02 の退店でも1時間分）。上限あり
- * ・それ以外の曜日と祝日：夜の部の料金
+ * ・それ以外の曜日、週末の曜日・祝日（カレンダーで週末・祝日にした日を含む）：夜の部の料金
  * 夜の部のお客様には延長料金はかからない
  */
 export function extensionFor(p: {
