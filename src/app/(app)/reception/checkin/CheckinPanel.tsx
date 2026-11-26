@@ -160,8 +160,10 @@ export function CheckinPanel(p: CheckinPanelProps) {
         <input type="hidden" name="payload" value={payload} />
         {why && <span className="text-[13px] text-sub">{why}</span>}
         <button disabled={!ok || pending} data-testid="checkin-confirm"
-          className={cx('btn-brand inline-flex h-14 min-w-64 items-center justify-center gap-2 rounded-xl px-6 text-[17px] font-bold disabled:cursor-not-allowed disabled:opacity-50')}>
-          {pending ? <Loader2 className="size-5 animate-spin" /> : <Check className="size-5" />}入店受付を確定（¥{quote.total.toLocaleString('ja-JP')}）
+          className={cx('btn-brand inline-flex h-14 w-full items-center justify-center gap-2 rounded-xl px-4 text-[16px] font-bold whitespace-nowrap sm:w-auto sm:min-w-64 sm:px-6 sm:text-[17px] disabled:cursor-not-allowed disabled:opacity-50')}>
+          {pending ? <Loader2 className="size-5 animate-spin" /> : <Check className="size-5" />}
+          <span className="sm:hidden">確定 ¥{quote.total.toLocaleString('ja-JP')}</span>
+          <span className="hidden sm:inline">入店受付を確定（¥{quote.total.toLocaleString('ja-JP')}）</span>
         </button>
       </form>
     </div>

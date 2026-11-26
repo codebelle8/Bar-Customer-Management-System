@@ -20,6 +20,9 @@ const TILES = [
   { href: '/reception/order', label: 'ドリンク注文', sub: '入店中のお客様の注文を登録', icon: GlassWater, cls: 'tile-outline' },
 ] as const
 
+/** ボタンの文字：「・」「の」の後ろでだけ改行する（狭い画面で言葉の途中で切れないように） */
+const breakable = (text: string) => text.split(/(?<=[・の])/).map((part, i) => <span key={i}>{i > 0 && <wbr />}{part}</span>)
+
 export default async function ReceptionPage({ searchParams }: PageProps<'/reception'>) {
   const sp = await searchParams
   const ctx = await requireCtx()
@@ -49,8 +52,8 @@ export default async function ReceptionPage({ searchParams }: PageProps<'/recept
               cls === 'tile-outline' ? 'card border-brand/30 text-brand hover:border-brand/60 hover:bg-brand-soft/40' : cls,
             )}>
             <Icon className="size-9" strokeWidth={1.8} />
-            <span className="text-[17px] leading-tight font-bold">{label}</span>
-            <span className={cx('text-[12px]', cls === 'tile-outline' ? 'text-sub' : 'text-white/85')}>{sub}</span>
+            <span className="text-[17px] leading-tight font-bold [overflow-wrap:anywhere] [word-break:keep-all]">{breakable(label)}</span>
+            <span className={cx('text-[12px] [overflow-wrap:anywhere] [word-break:keep-all]', cls === 'tile-outline' ? 'text-sub' : 'text-white/85')}>{breakable(sub)}</span>
           </Link>
         ))}
       </div>

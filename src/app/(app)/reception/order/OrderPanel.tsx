@@ -125,7 +125,7 @@ export function OrderPanel({ visitId, menu, items, canEdit }: { visitId: string;
       {canEdit && (
         <form action={action} className="sticky bottom-3 z-10 flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-white/95 px-4 py-3 shadow-[0_8px_28px_rgba(42,20,80,0.14)] backdrop-blur">
           <input type="hidden" name="payload" value={payload} />
-          <div className="min-w-0 flex-1">
+          <div className="min-w-[min(100%,12rem)] flex-1">
             {state?.error ? (
               <p role="alert" className="text-[14px] font-bold text-up">{state.error}</p>
             ) : lines.length ? (
@@ -139,8 +139,10 @@ export function OrderPanel({ visitId, menu, items, canEdit }: { visitId: string;
             )}
           </div>
           <button disabled={!lines.length || pending} data-testid="order-submit"
-            className="btn-brand inline-flex h-14 min-w-64 items-center justify-center gap-2 rounded-xl px-6 text-[17px] font-bold disabled:cursor-not-allowed disabled:opacity-50">
-            {pending ? <Loader2 className="size-5 animate-spin" /> : <Check className="size-5" />}注文を登録（¥{cartTotal.toLocaleString('ja-JP')}）
+            className="btn-brand inline-flex h-14 w-full items-center justify-center gap-2 rounded-xl px-4 text-[16px] font-bold whitespace-nowrap sm:w-auto sm:min-w-64 sm:px-6 sm:text-[17px] disabled:cursor-not-allowed disabled:opacity-50">
+            {pending ? <Loader2 className="size-5 animate-spin" /> : <Check className="size-5" />}
+            <span className="sm:hidden">登録 ¥{cartTotal.toLocaleString('ja-JP')}</span>
+            <span className="hidden sm:inline">注文を登録（¥{cartTotal.toLocaleString('ja-JP')}）</span>
           </button>
         </form>
       )}

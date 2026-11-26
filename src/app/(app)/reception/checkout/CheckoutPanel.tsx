@@ -142,9 +142,10 @@ export function CheckoutPanel({ visitId, unpaid, extension, extensionNote, entry
         <input type="hidden" name="payload" value={payload} />
         {!paidOk(paid, total) && <span className="text-[13px] text-up">預かり金が不足しています</span>}
         <button disabled={!ok || pending} data-testid="checkout-confirm"
-          className="btn-brand inline-flex h-14 min-w-64 items-center justify-center gap-2 rounded-xl px-6 text-[17px] font-bold disabled:cursor-not-allowed disabled:opacity-50">
+          className="btn-brand inline-flex h-14 w-full items-center justify-center gap-2 rounded-xl px-4 text-[16px] font-bold whitespace-nowrap sm:w-auto sm:min-w-64 sm:px-6 sm:text-[17px] disabled:cursor-not-allowed disabled:opacity-50">
           {pending ? <Loader2 className="size-5 animate-spin" /> : <Check className="size-5" />}
-          {total ? `退店・精算を確定（¥${total.toLocaleString('ja-JP')}）` : '¥0 で退店する'}
+          <span className="sm:hidden">{total ? `確定 ¥${total.toLocaleString('ja-JP')}` : '¥0 で退店する'}</span>
+          <span className="hidden sm:inline">{total ? `退店・精算を確定（¥${total.toLocaleString('ja-JP')}）` : '¥0 で退店する'}</span>
         </button>
       </form>
     </div>
