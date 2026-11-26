@@ -1,5 +1,5 @@
 'use client'
-// 新規入会の受付（4ステップ）：規約署名 → 本人確認 → 会員情報 → 料金・お会計
+// 新規入会の受付（4ステップ）：規約の確認 → 本人確認 → 会員情報 → 料金・お会計
 import Link from 'next/link'
 import { useActionState, useEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, Check, IdCard, Loader2, ShieldCheck } from 'lucide-react'
@@ -16,8 +16,8 @@ import { MemberPicker } from '../_components/MemberPicker'
 import { buildQuote, parseYen } from '../_lib/quote'
 import type { Gender, MemberCard, TodayView } from '../_lib/types'
 
-const STEPS = ['会員規約の説明・署名', '本人確認', '会員情報', '料金・お会計'] as const
-const SHORT = ['規約・署名', '本人確認', '会員情報', '料金・お会計'] as const
+const STEPS = ['会員規約の説明・確認', '本人確認', '会員情報', '料金・お会計'] as const
+const SHORT = ['規約・確認', '本人確認', '会員情報', '料金・お会計'] as const
 
 export interface WizardProps {
   terms: TermsLine[]
@@ -85,7 +85,7 @@ export function NewMemberWizard(p: WizardProps) {
     registerOnly || ((cat !== 'カップル' || !!partner) && paidOk(paid, total)),
   ]
   const missing = [
-    '規約用紙への署名を確認してください',
+    '会員規約の内容確認にチェックしてください',
     !photoId || !subId ? '確認した書類を2点選んでください' : !copied ? 'コピーを取ったことを確認してください' : !birthday ? '生年月日を入力してください' : under20 ? '20歳未満は入会できません' : '生年月日を確認してください',
     !handle.trim() ? 'ハンドルネームを入力してください' : '性別を選んでください',
     cat === 'カップル' && !partner ? 'パートナーの会員を選んでください' : '預かり金が不足しています',
@@ -131,15 +131,15 @@ export function NewMemberWizard(p: WizardProps) {
       <p className="-mt-2 text-center text-[13px] font-bold text-brand md:hidden">STEP {step + 1}　{STEPS[step]}</p>
 
       {step === 0 && (
-        <Card title="会員規約の説明・署名" action={<span className="text-[12px] text-sub">規約バージョン {p.termsVersion}</span>}>
+        <Card title="会員規約の説明・確認" action={<span className="text-[12px] text-sub">規約バージョン {p.termsVersion}</span>}>
           <div className="scrollbar-thin max-h-[46vh] overflow-y-auto rounded-xl border border-line bg-[#fcfbfe] px-5 py-4 text-[14px] leading-[1.9]">
             <TermsBody lines={p.terms} />
             <p className="mt-4 rounded-lg border border-brand/30 bg-white px-4 py-3 text-center font-bold">{p.pledge}</p>
           </div>
           <p className="mt-3 text-[12px] text-sub">太字・下線の項目は特にご説明ください。</p>
           <div className="mt-4">
-            <CheckTile checked={signed} onChange={setSigned} required testId="terms-signed" sub="お客様に規約を説明し、紙の規約用紙に署名をいただいたことを確認します">
-              会員規約用紙に署名をいただきました
+            <CheckTile checked={signed} onChange={setSigned} required testId="terms-signed" sub="お客様に会員規約を説明し、内容を確認・理解していただいたことを確認します">
+              会員規約の内容を確認し、理解しました
             </CheckTile>
           </div>
         </Card>

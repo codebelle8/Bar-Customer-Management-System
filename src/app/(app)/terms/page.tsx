@@ -21,7 +21,7 @@ export default async function TermsPage() {
       <div className="flex flex-wrap items-center gap-3">
         <p className="text-[13px] text-sub">
           {ctx.store.name}・版 <b className="font-mono text-ink">{s.version}</b>
-          <span className="ml-2 hidden text-mute sm:inline">新規入会の際に、この規約を確認・署名していただきます。</span>
+          <span className="ml-2 hidden text-mute sm:inline">新規入会の際に、この規約の内容を確認していただきます。</span>
         </p>
         <div className="ml-auto flex flex-wrap gap-2">
           {ctx.isOwner && (

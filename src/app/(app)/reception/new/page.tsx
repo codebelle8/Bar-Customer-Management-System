@@ -84,7 +84,7 @@ async function Done({ id, paid }: { id: string; paid: number | null }) {
           <Item label="入会日">{fmtDate(m.joinedAt)}</Item>
           <Item label="確認書類" className="col-span-2">{m.idDocs.join('・')}</Item>
           <Item label="来店のきっかけ">{m.referral || '—'}</Item>
-          <Item label="規約">v{m.termsVersion} 署名済</Item>
+          <Item label="規約">v{m.termsVersion} 確認済</Item>
         </dl>
       </section>
 

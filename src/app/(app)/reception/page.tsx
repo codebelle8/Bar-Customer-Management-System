@@ -14,7 +14,7 @@ import { inStoreRows, loadToday, PART_LABEL } from './_lib/server'
 export const metadata: Metadata = { title: '来店受付' }
 
 const TILES = [
-  { href: '/reception/new', label: '新規入会・来店受付', sub: '規約署名・本人確認・会員登録', icon: UserPlus, cls: 'btn-brand' },
+  { href: '/reception/new', label: '新規入会・来店受付', sub: '規約の確認・本人確認・会員登録', icon: UserPlus, cls: 'btn-brand' },
   { href: '/reception/checkin', label: '既存会員の来店受付', sub: '会員番号・ハンドルネームで検索', icon: Search, cls: 'btn-brand-soft' },
   { href: '/reception/checkout', label: '退店・追加精算', sub: '延長料金・ドリンクの精算', icon: ReceiptText, cls: 'tile-outline' },
   { href: '/reception/order', label: 'ドリンク注文', sub: '入店中のお客様の注文を登録', icon: GlassWater, cls: 'tile-outline' },

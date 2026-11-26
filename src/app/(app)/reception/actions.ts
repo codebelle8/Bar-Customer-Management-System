@@ -86,7 +86,7 @@ export async function checkHandleAction(name: string): Promise<{ matches: { memb
 /* ------------------------------ 新規入会・来店受付 ------------------------------ */
 
 const RegisterSchema = z.object({
-  termsSigned: z.literal(true, { error: '会員規約用紙への署名を確認してください。' }),
+  termsSigned: z.literal(true, { error: '会員規約の内容確認にチェックしてください。' }),
   photoId: z.string().refine((v) => PHOTO_ID_DOCS.includes(v), '顔写真付きの身分証を選んでください。'),
   subId: z.string().refine((v) => SUB_ID_DOCS.includes(v), '2点目の確認書類を選んでください。'),
   copied: z.literal(true, { error: '本人確認書類のコピーを確認してください。' }),
