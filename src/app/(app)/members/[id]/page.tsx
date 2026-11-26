@@ -159,9 +159,9 @@ export default async function MemberDetailPage({ params, searchParams }: PagePro
         <div className="rounded-xl border border-line bg-[#f0eef4] px-5 py-3 text-[14px] text-sub">退会済みの会員です。受付では入店できません。</div>
       )}
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_1.35fr]">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]">
         <Card title="プロフィール">
-          <dl className="grid grid-cols-[8.5rem_1fr] gap-x-3 text-[14px] [&>dd]:border-b [&>dd]:border-line [&>dd]:py-2.5 [&>dt]:border-b [&>dt]:border-line [&>dt]:py-2.5">
+          <dl className="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-x-3 sm:grid-cols-[8.5rem_minmax(0,1fr)] text-[14px] [&>dd]:border-b [&>dd]:border-line [&>dd]:py-2.5 [&>dt]:border-b [&>dt]:border-line [&>dt]:py-2.5">
             <dt className="text-sub">会員番号</dt><dd className="font-bold tabular-nums">{m.memberNo}</dd>
             <dt className="text-sub">ハンドルネーム</dt>
             <dd className="font-bold">{m.handleName}{m.kana && <span className="ml-2 text-[12px] font-medium text-sub">{m.kana}</span>}</dd>
@@ -335,7 +335,7 @@ export default async function MemberDetailPage({ params, searchParams }: PagePro
       </Card>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1.6fr_1fr]">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <Card title="会員情報の編集">
           <EditMemberForm
             m={{ id: m.id, memberNo: m.memberNo, handleName: m.handleName, kana: m.kana, realName: m.realName, gender: m.gender, birthday: m.birthday, referral: m.referral, memo: m.memo, idDocs: m.idDocs, feeExpiresAt: m.feeExpiresAt }}

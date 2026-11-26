@@ -11,7 +11,7 @@ export default async function AccountPage() {
   return (
     <div className="animate-fade-in max-w-xl space-y-5">
       <Card title="アカウント">
-        <dl className="grid grid-cols-[7rem_1fr] gap-y-2 text-[14px]">
+        <dl className="grid grid-cols-[7rem_minmax(0,1fr)] gap-y-2 text-[14px]">
           <dt className="text-sub">名前</dt><dd>{ctx.user.name}</dd>
           <dt className="text-sub">ログインID</dt><dd>{ctx.user.loginId}</dd>
           <dt className="text-sub">権限</dt><dd>{ctx.allStores ? 'オーナー（全店舗）' : `${ROLE_LABEL[ctx.user.role]}（${ctx.store.name}）`}</dd>

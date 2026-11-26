@@ -55,7 +55,7 @@ export default async function ReceptionPage({ searchParams }: PageProps<'/recept
         ))}
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1.15fr_1fr]">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
         <Card title="本日の料金" action={<span className={cx('rounded-full px-3 py-1 text-[12px] font-bold', style.cell)}>{style.label}</span>}>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <span className="text-[18px] font-bold">{fmtJaDate(today.businessDate)}</span>
@@ -71,7 +71,7 @@ export default async function ReceptionPage({ searchParams }: PageProps<'/recept
               </span>
             )}
           </div>
-          <div className="mt-4 overflow-hidden rounded-xl border border-line">
+          <div className="mt-4 overflow-x-auto rounded-xl border border-line">
             <table className="w-full text-[14px]">
               <thead>
                 <tr className="bg-[#f8f6fc]">
@@ -148,8 +148,8 @@ export default async function ReceptionPage({ searchParams }: PageProps<'/recept
                       <div className="text-[16px] font-bold">{r.time}</div>
                       <div className="text-[11px] text-sub">{r.stale ? <span className="font-bold text-up">{fmtMD(r.businessDate)}から</span> : elapsed(r.minutes)}</div>
                     </Td>
-                    <Td className="w-full max-w-0">
-                      <div className="flex items-center gap-1.5">
+                    <Td className="w-full max-w-0 min-w-32">
+                      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
                         <span className="text-[12px] font-bold text-brand">{r.memberNo}</span>
                         <GenderBadge gender={r.category} />
                         {r.isNew && <Badge tone="purple">新規</Badge>}
@@ -163,7 +163,7 @@ export default async function ReceptionPage({ searchParams }: PageProps<'/recept
                       {r.itemCount > 0 && <div className="text-[11px] text-sub">{r.itemCount}件</div>}
                     </Td>
                     <Td className="text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:justify-end">
                         <Link href={`/reception/order?visit=${r.id}`} className={buttonCls('outline')}><GlassWater className="size-4" />ドリンク注文</Link>
                         <Link href={`/reception/checkout?visit=${r.id}`} className={buttonCls('brand')}><ReceiptText className="size-4" />退店・精算</Link>
                       </div>

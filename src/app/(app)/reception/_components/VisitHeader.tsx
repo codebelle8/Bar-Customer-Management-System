@@ -25,10 +25,10 @@ export function VisitHeader(p: {
 }) {
   return (
     <div className="card flex flex-wrap items-center gap-x-5 gap-y-3 px-5 py-4">
-      <div className="min-w-0 flex-1">
+      <div className="min-w-[min(100%,16rem)] flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[15px] font-bold text-brand tabular-nums">{p.memberNo}</span>
-          <span className="truncate text-[24px] font-bold" data-testid="visit-handle">{p.handle}</span>
+          <span className="text-[15px] font-bold whitespace-nowrap text-brand tabular-nums">{p.memberNo}</span>
+          <span className="max-w-full min-w-0 truncate text-[22px] font-bold sm:text-[24px]" data-testid="visit-handle">{p.handle}</span>
           <GenderBadge gender={p.category} />
           {p.isNew && <Badge tone="purple">新規</Badge>}
           <VisitStatusBadge status={p.status} auto={p.auto} />

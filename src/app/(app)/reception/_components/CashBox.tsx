@@ -14,7 +14,7 @@ export function CashBox({ total, paid, onPaid, label = 'お会計' }: { total: n
         <span className="text-[15px] font-bold text-sub">{label}</span>
         <span className="text-[40px] leading-none font-bold tracking-tight tabular-nums text-ink" data-testid="cash-total">¥{total.toLocaleString('ja-JP')}</span>
       </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+      <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
         <label className="block">
           <span className="mb-1.5 block text-[13px] font-medium text-sub">預かり金</span>
           <div className="relative">

@@ -14,6 +14,7 @@ import { addMonths, fmtJaMonth, fmtMD, num, pct, WEEK_JA, weekdayOf, yen } from 
 import { DAY_TYPE_STYLE, DAY_TYPES } from '@/lib/pricing'
 import { addCounts, countsTotal, dailyRows, emptyCounts, sumRows, summaryOf, visitorBreakdown, type VisitorCounts } from '@/lib/stats'
 import { businessToday, loadAdjustments, monthRange } from '../sales/data'
+import { Tabs } from '@/components/settings/fields'
 
 export const metadata: Metadata = { title: 'レポート' }
 
@@ -38,14 +39,7 @@ export default async function ReportsPage({ searchParams }: PageProps<'/reports'
   const href = (k: Tab, m = month) => `/reports?${new URLSearchParams(k === 'summary' ? { month: m } : { tab: k, month: m })}`
   return (
     <div className="animate-fade-in space-y-5">
-      <nav className="flex gap-1 overflow-x-auto border-b border-line">
-        {TABS.map((x) => (
-          <Link key={x.key} href={href(x.key)}
-            className={cx('-mb-px border-b-[3px] px-5 py-3 text-[15px] font-medium whitespace-nowrap transition', tab === x.key ? 'border-brand text-brand' : 'border-transparent text-sub hover:text-ink')}>
-            {x.label}
-          </Link>
-        ))}
-      </nav>
+      <Tabs items={TABS} current={tab} hrefFor={(k) => href(k as Tab)} />
       <div className="flex flex-wrap items-center gap-3">
         <MonthNav month={month} max={cur} path="/reports" extra={tab === 'summary' ? {} : { tab }} />
         <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -118,7 +112,7 @@ async function SummaryTab({ month, today }: { month: string; today: string }) {
         </div>
       </Card>
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(300px,1fr)_2fr]">
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(300px,1fr)_minmax(0,2fr)]">
         <Card title="現金残（▲イベ経費）">
           <div className="grid items-center gap-4 sm:grid-cols-2 xl:grid-cols-1">
           <div>

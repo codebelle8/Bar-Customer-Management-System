@@ -6,8 +6,8 @@ export function Card({ children, className, title, action, bodyClass }: { childr
   return (
     <section className={cx('card', className)}>
       {title && (
-        <div className="flex items-center justify-between gap-3 px-5 pt-4">
-          <h2 className="section-title">{title}</h2>
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 px-5 pt-4">
+          <h2 className="section-title min-w-0">{title}</h2>
           {action}
         </div>
       )}

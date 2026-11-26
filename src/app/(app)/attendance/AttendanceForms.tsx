@@ -239,13 +239,13 @@ export function StaffMemberRow({ m }: { m: { id: string; name: string; kind: Sta
   return (
     <tr className={cx('border-t border-line', !m.active && 'bg-page')}>
       <td colSpan={4} className="px-3 py-2.5">
-        <ActionForm action={updateStaffMember} message="none" className="grid grid-cols-[minmax(0,1fr)_8.5rem_auto_auto] items-center gap-3">
+        <ActionForm action={updateStaffMember} message="none" className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:grid-cols-[minmax(0,1fr)_8.5rem_auto_auto] sm:gap-3">
           <input type="hidden" name="id" value={m.id} />
           <Input name="name" defaultValue={m.name} maxLength={20} required aria-label="名前" />
           <KindSelect value={m.kind} />
           <Switch name="active" defaultChecked={m.active} label="有効" />
-          <SubmitButton size="sm">保存</SubmitButton>
-          <FormMessage className="col-span-4" />
+          <SubmitButton size="sm" className="col-start-2 row-start-1 sm:col-start-auto sm:row-start-auto">保存</SubmitButton>
+          <FormMessage className="col-span-2 sm:col-span-4" />
         </ActionForm>
       </td>
     </tr>

@@ -40,6 +40,15 @@ body {
   font-feature-settings: "palt";
 }
 
+/* 画面幅に合わせたレイアウトの共通ルール（Tailwind のユーティリティより優先度の低い base レイヤー）
+   ・列の指定がないグリッド（スマートフォンの1列表示）は、画面の幅いっぱいまでの1列にする。
+     既定の列（auto）のままだと、中の表やボタンの幅に合わせてカードが画面の外まで広がるため */
+@layer base {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .card {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
@@ -65,8 +74,9 @@ body {
 
 .section-title {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 2px 10px;
   font-weight: 700;
   font-size: 16px;
 }

@@ -63,7 +63,7 @@ export function ThemeToggle({ initial, className, align = 'right' }: { initial: 
         <Icon className="size-5" />
       </button>
       {open && (
-        <div role="menu" className={cx('animate-fade-in absolute z-50 mt-2 w-56 rounded-xl border border-line bg-white py-1.5 shadow-xl', align === 'right' ? 'right-0' : 'left-0')}>
+        <div role="menu" className={cx('animate-fade-in fixed inset-x-3 top-[76px] z-50 rounded-xl border border-line bg-white py-1.5 shadow-xl sm:absolute sm:inset-x-auto sm:top-auto sm:mt-2 sm:w-56', align === 'right' ? 'sm:right-0' : 'sm:left-0')}>
           <p className="px-4 pt-1 pb-1.5 text-[12px] font-bold text-sub">画面の明るさ</p>
           {OPTIONS.map(({ value, label, icon: I }) => (
             <button key={value} type="button" role="menuitemradio" aria-checked={pref === value} onClick={() => choose(value)}

@@ -64,7 +64,7 @@ export function AdjustmentsForm({ month, cashLeft, rows }: { month: string; cash
       <div>
         <div className="mb-2 flex items-center justify-between gap-2">
           <p className="text-[12px] font-bold text-sub">経費（差引現金残から差し引く）</p>
-          <button type="button" onClick={add} className="inline-flex h-9 items-center gap-1 rounded-lg border border-dashed border-brand/50 px-3 text-[12px] font-bold text-brand transition hover:bg-brand-soft">
+          <button type="button" onClick={add} className="inline-flex h-9 shrink-0 items-center gap-1 rounded-lg border border-dashed border-brand/50 px-3 text-[12px] font-bold whitespace-nowrap text-brand transition hover:bg-brand-soft">
             <Plus className="size-4" />項目を追加
           </button>
         </div>

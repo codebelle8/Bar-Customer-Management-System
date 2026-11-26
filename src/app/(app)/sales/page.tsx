@@ -95,10 +95,10 @@ async function StaffView({ sp }: { sp: SP }) {
   return (
     <>
       <div className="flex flex-wrap items-center gap-3">
-        <div className="grid grid-cols-2 gap-2 rounded-xl border border-line bg-white p-1.5" role="tablist">
+        <div className="grid w-full grid-cols-2 gap-2 rounded-xl border border-line bg-white p-1.5 sm:w-auto" role="tablist">
           {dates.map((d, i) => (
             <Link key={d} href={i === 0 ? '/sales' : `/sales?date=${d}`} role="tab" aria-selected={d === date}
-              className={cx('flex min-w-[170px] flex-col items-center rounded-lg px-4 py-2 transition', d === date ? 'btn-brand' : 'text-sub hover:bg-page')}>
+              className={cx('flex min-w-0 flex-col items-center rounded-lg px-2 py-2 transition sm:min-w-[170px] sm:px-4', d === date ? 'btn-brand' : 'text-sub hover:bg-page')}>
               <span className="text-[12px] font-medium opacity-90">{i === 0 ? '本日（営業日）' : '前営業日'}</span>
               <span className="text-[16px] font-bold tabular-nums">{fmtMD(d)}（{WEEK_JA[weekdayOf(d)]}）</span>
             </Link>
@@ -114,7 +114,7 @@ async function StaffView({ sp }: { sp: SP }) {
         <Info className="size-4 shrink-0 text-brand" />
         スタッフは本日と前営業日の内容のみ確認・入力できます。削除できるのは自分が入力した項目だけです。月の集計はオーナーが確認します。
       </p>
-      <div className="grid items-start gap-5 xl:grid-cols-[1.25fr_1fr]">
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         <div className="space-y-5"><DaySummary data={day} /></div>
         <ExpensePanel data={day} canDelete={(e) => e.staffId === ctx.user.id} showNames={false} />
       </div>

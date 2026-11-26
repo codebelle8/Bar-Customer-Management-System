@@ -13,6 +13,7 @@ import { loadPricing, query, requireCtx } from '@/lib/dal'
 import { addDays, addMonths, fmtJaMonth, fmtMD, fmtTime, monthDates, num, pct, WEEK_JA, weekdayOf, yen } from '@/lib/format'
 import { businessDateOf, dayInfo } from '@/lib/pricing'
 import { dailyRows, sumRows, visitCounts } from '@/lib/stats'
+import { Tabs } from '@/components/settings/fields'
 
 export const metadata: Metadata = { title: 'ダッシュボード' }
 
@@ -41,14 +42,7 @@ export default async function DashboardPage({ searchParams }: PageProps<'/dashbo
       {sp.denied && (
         <p className="rounded-lg border border-[#f2c2cb] bg-[#fff4f6] px-4 py-2.5 text-[13px] text-up">この画面はオーナーのみ利用できます。</p>
       )}
-      <nav className="flex gap-1 border-b border-line">
-        {tabs.map((x) => (
-          <Link key={x.key} href={x.key === 'today' ? '/dashboard' : `/dashboard?tab=${x.key}`}
-            className={cx('-mb-px border-b-[3px] px-5 py-3 text-[15px] font-medium transition', tab === x.key ? 'border-brand text-brand' : 'border-transparent text-sub hover:text-ink')}>
-            {x.label}
-          </Link>
-        ))}
-      </nav>
+      <Tabs items={tabs} current={tab} hrefFor={(k) => (k === 'today' ? '/dashboard' : `/dashboard?tab=${k}`)} />
       {tab === 'today' && <TodayTab today={today} cal={ym(sp.cal) ?? today.slice(0, 7)} />}
       {tab === 'month' && <MonthTab today={today} month={ym(sp.month) ?? today.slice(0, 7)} />}
       {tab === 'visits' && <VisitsTab today={today} date={ymd(sp.date) ?? today} />}
@@ -118,7 +112,7 @@ async function TodayTab({ today, cal }: { today: string; cal: string }) {
         {ctx.isOwner && <Kpi icon={<Coins className="size-5" />} label="現金残高" value={yen(cash)} sub={`${+today.slice(5, 7)}月の総売上 − 経費 − アルバイト`} />}
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1.25fr_1fr]">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         <Card title="売上推移（直近7日）" action={<Legend />}>
           <SalesTrendChart data={trend} />
         </Card>
@@ -137,14 +131,14 @@ async function TodayTab({ today, cal }: { today: string; cal: string }) {
         </Card>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_1.6fr_0.8fr]">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)_minmax(0,0.8fr)]">
         <Card title="本日の来店受付">
           <div className="grid grid-cols-2 gap-3">
-            <Link href="/reception/new" className="btn-brand flex h-24 flex-col items-center justify-center gap-1.5 rounded-xl text-center text-[13px] font-bold">
-              <Plus className="size-7" />新規入会・来店受付
+            <Link href="/reception/new" className="btn-brand flex h-24 flex-col items-center justify-center gap-1.5 rounded-xl px-2 text-center text-[13px] leading-snug font-bold [word-break:keep-all]">
+              <Plus className="size-7 shrink-0" /><span>新規入会・<wbr />来店受付</span>
             </Link>
-            <Link href="/reception/checkin" className="btn-brand-soft flex h-24 flex-col items-center justify-center gap-1.5 rounded-xl text-center text-[13px] font-bold">
-              <Search className="size-7" />既存会員の来店受付
+            <Link href="/reception/checkin" className="btn-brand-soft flex h-24 flex-col items-center justify-center gap-1.5 rounded-xl px-2 text-center text-[13px] leading-snug font-bold [word-break:keep-all]">
+              <Search className="size-7 shrink-0" /><span>既存会員の<wbr />来店受付</span>
             </Link>
           </div>
           <h3 className="section-title mt-5 mb-3 text-[15px]">本日の会計</h3>
@@ -243,14 +237,16 @@ async function MonthTab({ today, month }: { today: string; month: string }) {
         <SalesTrendChart data={trend} height={300} barSize={16} />
       </Card>
       <Card title="昼の部・夜の部">
-        <table className="w-full text-[13px]">
-          <thead><tr className="border-b border-line"><Th /><Th className="text-right">男性</Th><Th className="text-right">女性</Th><Th className="text-right">カップル</Th><Th className="text-right">入場料</Th><Th className="text-right">ドリンク</Th><Th className="text-right">売上</Th></tr></thead>
-          <tbody className="tabular-nums">
-            <tr className="border-b border-line"><Td className="font-medium">昼の部</Td><Td className="text-right">{s.maleDay}</Td><Td className="text-right">{s.femaleDay}</Td><Td className="text-right">{s.cpDay}</Td><Td className="text-right">{yen(s.entranceDay)}</Td><Td className="text-right">{yen(s.drinkDay)}</Td><Td className="text-right font-bold">{yen(s.salesDay)}</Td></tr>
-            <tr className="border-b border-line"><Td className="font-medium">夜の部</Td><Td className="text-right">{s.maleNight}</Td><Td className="text-right">{s.femaleNight}</Td><Td className="text-right">{s.cpNight}</Td><Td className="text-right">{yen(s.entranceNight)}</Td><Td className="text-right">{yen(s.drinkNight)}</Td><Td className="text-right font-bold">{yen(s.salesNight)}</Td></tr>
-            <tr><Td className="font-bold">合計</Td><Td className="text-right font-bold">{s.male}</Td><Td className="text-right font-bold">{s.female}</Td><Td className="text-right font-bold">{s.cp}</Td><Td className="text-right font-bold">{yen(s.entrance)}</Td><Td className="text-right font-bold">{yen(s.drinkTotal)}</Td><Td className="text-right font-bold">{yen(s.total)}</Td></tr>
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <table className="w-full text-[13px]">
+            <thead><tr className="border-b border-line"><Th /><Th className="text-right">男性</Th><Th className="text-right">女性</Th><Th className="text-right">カップル</Th><Th className="text-right">入場料</Th><Th className="text-right">ドリンク</Th><Th className="text-right">売上</Th></tr></thead>
+            <tbody className="tabular-nums">
+              <tr className="border-b border-line"><Td className="font-medium">昼の部</Td><Td className="text-right">{s.maleDay}</Td><Td className="text-right">{s.femaleDay}</Td><Td className="text-right">{s.cpDay}</Td><Td className="text-right">{yen(s.entranceDay)}</Td><Td className="text-right">{yen(s.drinkDay)}</Td><Td className="text-right font-bold">{yen(s.salesDay)}</Td></tr>
+              <tr className="border-b border-line"><Td className="font-medium">夜の部</Td><Td className="text-right">{s.maleNight}</Td><Td className="text-right">{s.femaleNight}</Td><Td className="text-right">{s.cpNight}</Td><Td className="text-right">{yen(s.entranceNight)}</Td><Td className="text-right">{yen(s.drinkNight)}</Td><Td className="text-right font-bold">{yen(s.salesNight)}</Td></tr>
+              <tr><Td className="font-bold">合計</Td><Td className="text-right font-bold">{s.male}</Td><Td className="text-right font-bold">{s.female}</Td><Td className="text-right font-bold">{s.cp}</Td><Td className="text-right font-bold">{yen(s.entrance)}</Td><Td className="text-right font-bold">{yen(s.drinkTotal)}</Td><Td className="text-right font-bold">{yen(s.total)}</Td></tr>
+            </tbody>
+          </table>
+        </div>
       </Card>
     </>
   )

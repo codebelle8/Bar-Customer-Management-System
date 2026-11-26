@@ -44,9 +44,9 @@ export default async function SettingsPage({ searchParams }: PageProps<'/setting
   return (
     <div key={ctx.storeId} className="animate-fade-in space-y-5">
       <Tabs items={TABS} current={tab} hrefFor={(k) => (k === 'store' ? '/settings' : `/settings?tab=${k}`)} />
-      <p className="flex items-center gap-2 text-[13px] text-sub">
-        <Info className="size-4 text-brand" />
-        対象店舗：<b className="text-ink">{ctx.store.name}</b>{ctx.store.status === 'preparing' && <Badge tone="amber">準備中</Badge>}{ctx.allStores && '（上部の店舗切り替えで変更できます）'}
+      <p className="flex items-start gap-2 text-[13px] text-sub">
+        <Info className="mt-0.5 size-4 shrink-0 text-brand" />
+        <span>対象店舗：<b className="text-ink">{ctx.store.name}</b>{ctx.store.status === 'preparing' && <> <Badge tone="amber">準備中</Badge></>}{ctx.allStores && '（上部の店舗切り替えで変更できます）'}</span>
       </p>
 
       {tab === 'store' && (

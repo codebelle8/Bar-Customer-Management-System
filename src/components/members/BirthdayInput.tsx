@@ -41,7 +41,7 @@ export function NumBox({ label, value, onChange, width, max, placeholder, ref, t
       <input ref={ref} inputMode="numeric" value={value} placeholder={placeholder} data-testid={testId}
         onChange={(e) => onChange(e.target.value.normalize('NFKC').replace(/\D/g, '').slice(0, max))}
         className={cx(
-          'rounded-xl border border-line bg-white px-3 text-center font-bold tabular-nums outline-none placeholder:text-[#d5cfe2] focus:border-brand focus:ring-2 focus:ring-brand/15',
+          'rounded-xl border border-line bg-white px-2 text-center font-bold tabular-nums outline-none sm:px-3 placeholder:text-[#d5cfe2] focus:border-brand focus:ring-2 focus:ring-brand/15',
           size === 'lg' ? 'h-14 text-[22px]' : 'h-12 text-[18px]', width,
         )} />
       <span className={cx('font-bold text-sub', size === 'lg' ? 'pb-3 text-[15px]' : 'pb-2.5 text-[14px]')}>{label}</span>
@@ -73,11 +73,13 @@ export function BirthdayInput({ name, defaultValue, today }: { name: string; def
               className={cx('h-12 px-3 text-[14px] font-bold transition', era === e ? 'bg-brand text-white' : 'bg-white text-sub hover:bg-page')}>{e}</button>
           ))}
         </div>
-        <NumBox ref={yearRef} size="md" label="年" value={y} width="w-24" max={era === '西暦' ? 4 : 2} placeholder={era === '西暦' ? '1990' : '2'} testId="birth-y"
+        <div className="flex items-end gap-2">
+        <NumBox ref={yearRef} size="md" label="年" value={y} width="w-[4.5rem] sm:w-24" max={era === '西暦' ? 4 : 2} placeholder={era === '西暦' ? '1990' : '2'} testId="birth-y"
           onChange={(v) => { setY(v); if (v.length === (era === '西暦' ? 4 : 2)) monthRef.current?.focus() }} />
-        <NumBox ref={monthRef} size="md" label="月" value={m} width="w-16" max={2} placeholder="5" testId="birth-m"
+        <NumBox ref={monthRef} size="md" label="月" value={m} width="w-12 sm:w-16" max={2} placeholder="5" testId="birth-m"
           onChange={(v) => { setM(v); if (v.length === 2 || +v > 1) dayRef.current?.focus() }} />
-        <NumBox ref={dayRef} size="md" label="日" value={d} width="w-16" max={2} placeholder="14" testId="birth-d" onChange={setD} />
+        <NumBox ref={dayRef} size="md" label="日" value={d} width="w-12 sm:w-16" max={2} placeholder="14" testId="birth-d" onChange={setD} />
+        </div>
       </div>
       <p className="mt-1.5 min-h-5 text-[12px]" data-testid="birth-note">
         {age != null && (

@@ -45,7 +45,7 @@ export function MenuGrid({ menu, cart, setCart }: { menu: MenuTile[]; cart: Reco
                     <span className="block min-h-10 text-[16px] leading-tight font-bold">{m.name}</span>
                     <span className="mt-1 block text-[18px] font-bold text-brand tabular-nums">¥{m.price.toLocaleString('ja-JP')}</span>
                   </button>
-                  <div className="mt-2 flex justify-end">
+                  <div className="mt-2 sm:flex sm:justify-end">
                     <Stepper value={qty} onChange={(v) => setCart({ ...cart, [m.id]: v })} label={`${m.name}の数量`} />
                   </div>
                 </div>
@@ -73,7 +73,7 @@ export function OrderPanel({ visitId, menu, items, canEdit }: { visitId: string;
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-5 xl:grid-cols-[1fr_340px]">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
         <Card title="メニュー">
           {canEdit ? <MenuGrid menu={menu} cart={cart} setCart={setCart} /> : <Notice tone="warn">この来店は精算済み・取消のため、注文を追加できません。</Notice>}
         </Card>

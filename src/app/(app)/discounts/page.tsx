@@ -109,16 +109,16 @@ export default async function DiscountsPage({ searchParams }: PageProps<'/discou
       <div className="grid gap-4 sm:grid-cols-3">
         {tabs.map(({ key, label, desc, n, icon: Icon }) => (
           <Link key={key} href={listHref(key)}
-            className={cx('card group block px-5 py-4 transition', list === key ? 'border-brand ring-2 ring-brand/25' : 'hover:border-brand-light')}>
+            className={cx('card group block px-4 py-4 transition lg:px-5', list === key ? 'border-brand ring-2 ring-brand/25' : 'hover:border-brand-light')}>
             <span className="flex items-center gap-2.5">
               <span className={cx('flex size-9 shrink-0 items-center justify-center rounded-lg', list === key ? 'btn-brand' : 'bg-brand-soft text-brand')}>
                 <Icon className="size-5" />
               </span>
-              <span className="text-[14px] font-bold">{label}</span>
+              <span className="text-[14px] leading-snug font-bold [word-break:keep-all]">{label}</span>
             </span>
-            <span className="mt-2 flex items-end justify-between gap-2">
-              <span className="text-[12px] leading-snug text-sub">{desc}</span>
-              <span className="shrink-0 whitespace-nowrap">
+            <span className="mt-2 flex flex-wrap items-end justify-between gap-x-2 gap-y-1">
+              <span className="min-w-0 grow basis-[8.5rem] text-[12px] leading-snug text-sub">{desc}</span>
+              <span className="ml-auto shrink-0 whitespace-nowrap">
                 <span className="text-[30px] leading-none font-bold tabular-nums">{n}</span>
                 <span className="ml-0.5 text-[13px] font-bold">名</span>
               </span>
@@ -232,7 +232,7 @@ function RuleBanner({ s, isOwner }: { s: StoreSettings; isOwner: boolean }) {
       <Sparkles className={cx('size-5 shrink-0', s.discountEnabled ? 'text-brand' : 'text-mute')} />
       <span className="text-[14px] font-bold">リピーター割引</span>
       {s.discountEnabled ? <Badge tone="green">適用中</Badge> : <Badge tone="red">停止中</Badge>}
-      <span className={cx('min-w-0 flex-1 text-[13px]', s.discountEnabled ? 'text-ink' : 'text-mute line-through')}>{ruleText(s)}</span>
+      <span className={cx('min-w-[min(100%,18rem)] flex-1 text-[13px]', s.discountEnabled ? 'text-ink' : 'text-mute line-through')}>{ruleText(s)}</span>
       {isOwner && <a href="#rule" className={cx(buttonCls('default', 'sm'), 'xl:hidden')}>ルールを変更</a>}
     </div>
   )

@@ -151,7 +151,7 @@ export function Topbar(props: {
 }) {
   const { isOwner, canSwitchStore, stores, storeId, storeName, userName, roleLabel, dateLabel, notices, themePref } = props
   const pathname = usePathname()
-  const title = NAV.find((n) => pathname === n.href || pathname.startsWith(`${n.href}/`))?.label ?? ''
+  const title = NAV.find((n) => pathname === n.href || pathname.startsWith(`${n.href}/`))?.label ?? (pathname.startsWith('/account') ? 'アカウント' : '')
   const [menu, setMenu] = useState(false)
   const [user, setUser] = useState(false)
   const [bell, setBell] = useState(false)
@@ -159,12 +159,18 @@ export function Topbar(props: {
   const bellRef = useOutside<HTMLDivElement>(bell, () => setBell(false))
   return (
     <>
-      <header className="no-print sticky top-0 z-30 flex h-[72px] items-center gap-3 border-b border-line bg-white/95 px-4 backdrop-blur lg:px-8">
-        <button onClick={() => setMenu(true)} className="rounded-lg p-2 text-ink hover:bg-page lg:hidden" aria-label="メニュー">
+      <header className="no-print sticky top-0 z-30 flex h-[72px] items-center gap-2 border-b border-line bg-white/95 px-3 backdrop-blur sm:gap-3 sm:px-4 lg:px-8">
+        <button onClick={() => setMenu(true)} className="shrink-0 rounded-lg p-2 text-ink hover:bg-page lg:hidden" aria-label="メニュー">
           <Menu className="size-5" />
         </button>
-        <h1 className="min-w-0 truncate text-[20px] font-bold whitespace-nowrap xl:text-[24px]">{title}</h1>
-        <div className="ml-auto flex shrink-0 items-center gap-2 lg:gap-3 xl:gap-4">
+        <h1 className="min-w-0 font-bold">
+          {/* スマートフォン：2行まで。「・」の後ろでだけ改行する */}
+          <span className="line-clamp-2 text-[16px] leading-tight [word-break:keep-all] [overflow-wrap:anywhere] sm:hidden">
+            {title.split('・').map((part, i, all) => <span key={i}>{part}{i < all.length - 1 && <>・<wbr /></>}</span>)}
+          </span>
+          <span className="hidden truncate text-[20px] whitespace-nowrap sm:block xl:text-[24px]">{title}</span>
+        </h1>
+        <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2 lg:gap-3 xl:gap-4">
           <div className="hidden items-center gap-2 md:flex">
             <span className="hidden text-[13px] font-medium whitespace-nowrap text-sub xl:inline">店舗：</span>
             {canSwitchStore ? (
@@ -175,7 +181,8 @@ export function Topbar(props: {
           </div>
           <span className="hidden h-10 items-center gap-2 rounded-lg border border-line px-3 text-[14px] font-medium whitespace-nowrap lg:flex">
             <CalendarDays className="size-4 text-sub" />
-            {dateLabel}
+            <span className="xl:hidden">{dateLabel.replace(/^\d+年/, '').replace('月', '/').replace('日', '')}</span>
+            <span className="hidden xl:inline">{dateLabel}</span>
           </span>
           <ThemeToggle initial={themePref} />
           <div ref={bellRef} className="relative">
@@ -184,7 +191,7 @@ export function Topbar(props: {
               {notices.length > 0 && <span className="absolute top-1.5 right-1.5 size-2.5 rounded-full bg-[#c026d3] ring-2 ring-white" />}
             </button>
             {bell && (
-              <div className="animate-fade-in absolute right-0 mt-2 w-72 rounded-xl border border-line bg-white py-2 shadow-xl">
+              <div className="animate-fade-in fixed inset-x-3 top-[76px] z-50 rounded-xl border border-line bg-white py-2 shadow-xl sm:absolute sm:inset-x-auto sm:top-auto sm:right-0 sm:mt-2 sm:w-72">
                 <p className="px-4 pb-1 text-[12px] font-bold text-sub">お知らせ</p>
                 {notices.length ? notices.map((n) => (
                   <Link key={n.text} href={n.href} onClick={() => setBell(false)} className="block px-4 py-2 text-[13px] hover:bg-page">{n.text}</Link>
@@ -193,13 +200,13 @@ export function Topbar(props: {
             )}
           </div>
           <div ref={userRef} className="relative">
-            <button onClick={() => setUser(!user)} className="flex items-center gap-2 rounded-full py-1 pr-2 pl-1 hover:bg-page">
+            <button onClick={() => setUser(!user)} className="flex items-center gap-2 rounded-full p-1 hover:bg-page xl:pr-2">
               <span className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-[#3b2463] to-[#6d35c9] text-[14px] font-bold text-white">{userName.slice(0, 1)}</span>
               <span className="hidden text-[14px] font-medium whitespace-nowrap xl:inline">{roleLabel}</span>
               <ChevronDown className="hidden size-4 text-sub xl:block" />
             </button>
             {user && (
-              <div className="animate-fade-in absolute right-0 mt-2 w-56 rounded-xl border border-line bg-white py-1 shadow-xl">
+              <div className="animate-fade-in fixed inset-x-3 top-[76px] z-50 rounded-xl border border-line bg-white py-1 shadow-xl sm:absolute sm:inset-x-auto sm:top-auto sm:right-0 sm:mt-2 sm:w-56">
                 <div className="border-b border-line px-4 py-3">
                   <p className="text-[14px] font-bold">{userName}</p>
                   <p className="text-[12px] text-sub">{roleLabel}・{storeName}</p>

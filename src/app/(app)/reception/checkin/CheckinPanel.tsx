@@ -132,7 +132,7 @@ export function CheckinPanel(p: CheckinPanelProps) {
               <Pencil className="size-4" />料金を調整する（オーナーのみ）
             </button>
             {adjust && (
-              <div className="mt-3 grid gap-3 sm:grid-cols-[180px_1fr]">
+              <div className="mt-3 grid gap-3 sm:grid-cols-[180px_minmax(0,1fr)]">
                 <label className="block">
                   <span className="mb-1 block text-[12px] font-medium text-sub">調整後の入場料 <span className="text-up">*</span></span>
                   <Input inputMode="numeric" value={adjFee} onChange={(e) => setAdjFee(e.target.value.replace(/[^\d０-９]/g, ''))} placeholder={String(p.today.prices[category])} className="h-12 text-right text-[18px] font-bold" />

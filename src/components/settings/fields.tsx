@@ -22,7 +22,7 @@ export function Switch({ name, defaultChecked, label, disabled, value = '1', ari
     <label className={cx('inline-flex items-center gap-2.5 select-none', disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer')}>
       <input type="checkbox" name={name} value={value} defaultChecked={defaultChecked} disabled={disabled} aria-label={ariaLabel} className="peer sr-only" />
       <span className="relative h-6 w-11 shrink-0 rounded-full bg-[#d9d3e6] transition peer-checked:bg-brand peer-focus-visible:ring-2 peer-focus-visible:ring-brand/30 after:absolute after:top-0.5 after:left-0.5 after:size-5 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-5" />
-      {label && <span className="text-[14px]">{label}</span>}
+      {label && <span className="text-[14px] whitespace-nowrap">{label}</span>}
     </label>
   )
 }
@@ -50,7 +50,7 @@ export function Tabs({ items, current, hrefFor }: { items: readonly { key: strin
     <nav className="scrollbar-thin flex gap-1 overflow-x-auto border-b border-line">
       {items.map((x) => (
         <Link key={x.key} href={hrefFor(x.key)}
-          className={cx('-mb-px border-b-[3px] px-5 py-3 text-[15px] font-medium whitespace-nowrap transition', current === x.key ? 'border-brand text-brand' : 'border-transparent text-sub hover:text-ink')}>
+          className={cx('-mb-px shrink-0 border-b-[3px] px-3 py-2.5 text-[14px] font-medium whitespace-nowrap transition sm:px-5 sm:py-3 sm:text-[15px]', current === x.key ? 'border-brand text-brand' : 'border-transparent text-sub hover:text-ink')}>
           {x.label}
         </Link>
       ))}

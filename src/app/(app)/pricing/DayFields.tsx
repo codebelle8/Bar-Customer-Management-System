@@ -48,7 +48,7 @@ export function DayFields({ date, override, autoType, autoLabel, table }: {
 
       <div className={cx(auto && 'opacity-50')}>
         <p className="mb-1.5 text-[12px] font-medium text-sub">個別料金（任意）<span className="ml-2 font-normal text-mute">空欄は料金表の「{shown}」の金額になります</span></p>
-        <div className="overflow-hidden rounded-lg border border-line">
+        <div className="overflow-x-auto rounded-lg border border-line">
           <table className="w-full text-[13px]">
             <thead className="bg-[#f8f6fc]">
               <tr>

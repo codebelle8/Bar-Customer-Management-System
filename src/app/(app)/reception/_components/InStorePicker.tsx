@@ -35,15 +35,16 @@ export function InStorePicker({ rows, hrefBase, actionLabel }: { rows: InStoreRo
         )}
         {list.map((r) => (
           <Link key={r.id} href={`${hrefBase}?visit=${r.id}`}
-            className="flex items-center gap-4 rounded-2xl border border-line bg-white px-4 py-3.5 transition hover:border-brand/50 hover:bg-brand-soft/30">
-            <div className="w-16 shrink-0 text-center">
+            className="flex items-center gap-3 rounded-2xl border border-line bg-white px-3 py-3 transition hover:border-brand/50 hover:bg-brand-soft/30 sm:gap-4 sm:px-4 sm:py-3.5">
+            <div className="hidden w-16 shrink-0 text-center sm:block">
               <div className="text-[20px] font-bold tabular-nums">{r.time}</div>
               <div className="text-[11px] text-sub">{elapsed(r.minutes)}</div>
             </div>
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[13px] font-bold text-brand tabular-nums">{r.memberNo}</span>
-                <span className="truncate text-[17px] font-bold">{r.handle}</span>
+              <div className="mb-0.5 text-[12px] text-sub tabular-nums sm:hidden"><b className="text-[14px] text-ink">{r.time}</b> 入店・{elapsed(r.minutes)}</div>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="text-[13px] font-bold whitespace-nowrap text-brand tabular-nums">{r.memberNo}</span>
+                <span className="max-w-full min-w-0 truncate text-[17px] font-bold">{r.handle}</span>
                 <GenderBadge gender={r.category} />
                 {r.isNew && <Badge tone="purple">新規</Badge>}
                 {r.stale && <Badge tone="red">{r.businessDate.slice(5).replace('-', '/')} から入店中</Badge>}
@@ -54,7 +55,7 @@ export function InStorePicker({ rows, hrefBase, actionLabel }: { rows: InStoreRo
               <div className="text-[11px] text-sub">未精算</div>
               <div className={cx('text-[16px] font-bold tabular-nums', r.unpaid ? 'text-up' : 'text-mute')}>¥{r.unpaid.toLocaleString('ja-JP')}</div>
             </div>
-            <span className="flex shrink-0 items-center gap-1 rounded-xl bg-brand-soft px-3 py-2.5 text-[14px] font-bold text-brand">
+            <span className="flex shrink-0 items-center gap-1 rounded-xl bg-brand-soft px-2.5 py-2.5 text-[14px] font-bold whitespace-nowrap text-brand sm:px-3">
               {actionLabel}<ChevronRight className="size-4" />
             </span>
           </Link>

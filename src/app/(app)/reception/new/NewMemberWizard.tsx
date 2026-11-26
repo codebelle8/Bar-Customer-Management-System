@@ -169,11 +169,13 @@ export function NewMemberWizard(p: WizardProps) {
                   className={cx('h-14 px-4 text-[15px] font-bold transition', era === e ? 'bg-brand text-white' : 'bg-white text-sub hover:bg-page')}>{e}</button>
               ))}
             </div>
-            <NumBox ref={yearRef} label="年" value={by} width="w-28" max={era === '西暦' ? 4 : 2} placeholder={era === '西暦' ? '1990' : '2'} testId="birth-y"
+            <div className="flex items-end gap-1.5 sm:gap-3">
+            <NumBox ref={yearRef} label="年" value={by} width="w-[4.5rem] sm:w-28" max={era === '西暦' ? 4 : 2} placeholder={era === '西暦' ? '1990' : '2'} testId="birth-y"
               onChange={(v) => { setBy(v); if (v.length === (era === '西暦' ? 4 : 2)) monthRef.current?.focus() }} />
-            <NumBox ref={monthRef} label="月" value={bm} width="w-20" max={2} placeholder="5" testId="birth-m"
+            <NumBox ref={monthRef} label="月" value={bm} width="w-12 sm:w-20" max={2} placeholder="5" testId="birth-m"
               onChange={(v) => { setBm(v); if (v.length === 2 || +v > 1) dayRef.current?.focus() }} />
-            <NumBox ref={dayRef} label="日" value={bd} width="w-20" max={2} placeholder="14" testId="birth-d" onChange={setBd} />
+            <NumBox ref={dayRef} label="日" value={bd} width="w-12 sm:w-20" max={2} placeholder="14" testId="birth-d" onChange={setBd} />
+            </div>
           </div>
           <div className="mt-3">
             {birthday && age != null && !under20 && (
@@ -288,22 +290,23 @@ export function NewMemberWizard(p: WizardProps) {
       {/* 操作 */}
       <div className="sticky bottom-3 z-10 flex items-center gap-3 rounded-2xl border border-line bg-white/95 px-4 py-3 shadow-[0_8px_28px_rgba(42,20,80,0.14)] backdrop-blur">
         {step > 0 ? (
-          <Button type="button" size="lg" onClick={() => setStep(step - 1)} className="h-14 px-6"><ArrowLeft className="size-5" />戻る</Button>
+          <Button type="button" size="lg" onClick={() => setStep(step - 1)} className="h-14 shrink-0 px-4 sm:px-6"><ArrowLeft className="size-5" />戻る</Button>
         ) : (
-          <Link href="/reception" className={cx(buttonCls('ghost', 'lg'), 'h-14')}>キャンセル</Link>
+          <Link href="/reception" className={cx(buttonCls('ghost', 'lg'), 'h-14 shrink-0 px-3 sm:px-5')}>キャンセル</Link>
         )}
-        <div className="ml-auto flex items-center gap-3">
-          {!valid[step] && <span className="hidden text-[13px] text-sub sm:inline">{missing[step]}</span>}
+        <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-3">
+          {!valid[step] && <span className="hidden min-w-0 text-right text-[13px] text-sub sm:inline">{missing[step]}</span>}
           {step < 3 ? (
-            <Button type="button" variant="brand" size="lg" disabled={!valid[step]} onClick={() => setStep(step + 1)} className="h-14 min-w-44 text-[17px]" data-testid="next">
+            <Button type="button" variant="brand" size="lg" disabled={!valid[step]} onClick={() => setStep(step + 1)} className="h-14 w-full shrink-0 text-[17px] sm:w-auto sm:min-w-44" data-testid="next">
               次へ<ArrowRight className="size-5" />
             </Button>
           ) : (
-            <form action={action}>
+            <form action={action} className="w-full shrink-0 sm:w-auto">
               <input type="hidden" name="payload" value={payload} />
-              <Button variant="brand" size="lg" disabled={!valid.every(Boolean) || pending} className="h-14 min-w-56 text-[17px]" data-testid="confirm">
+              <Button variant="brand" size="lg" disabled={!valid.every(Boolean) || pending} className="h-14 w-full px-3 text-[16px] sm:min-w-56 sm:px-5 sm:text-[17px]" data-testid="confirm">
                 {pending ? <Loader2 className="size-5 animate-spin" /> : <Check className="size-5" />}
-                {registerOnly ? '会員登録を確定する' : `入会・入店を確定（¥${total.toLocaleString('ja-JP')}）`}
+                <span className="sm:hidden">{registerOnly ? '登録を確定' : `確定 ¥${total.toLocaleString('ja-JP')}`}</span>
+                <span className="hidden sm:inline">{registerOnly ? '会員登録を確定する' : `入会・入店を確定（¥${total.toLocaleString('ja-JP')}）`}</span>
               </Button>
             </form>
           )}

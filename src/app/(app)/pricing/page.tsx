@@ -54,9 +54,9 @@ export default async function PricingPage({ searchParams }: PageProps<'/pricing'
   return (
     <div key={ctx.storeId} className="animate-fade-in space-y-5">
       <Tabs items={TABS} current={tab} hrefFor={(k) => (k === 'table' ? '/pricing' : `/pricing?tab=${k}`)} />
-      <p className="flex items-center gap-2 text-[13px] text-sub">
-        <Info className="size-4 text-brand" />
-        対象店舗：<b className="text-ink">{ctx.store.name}</b>（上部の店舗切り替えで変更できます）
+      <p className="flex items-start gap-2 text-[13px] text-sub">
+        <Info className="mt-0.5 size-4 shrink-0 text-brand" />
+        <span>対象店舗：<b className="text-ink">{ctx.store.name}</b>（上部の店舗切り替えで変更できます）</span>
       </p>
       {tab === 'table' && <TableTab settings={data.settings} rules={data.rules} overrides={data.overrides} today={data.today} />}
       {tab === 'calendar' && (
@@ -152,27 +152,29 @@ function DayPriceTable({ day, rules }: { day: DayInfo; rules: PriceRule[] }) {
         {day.label && <span className="font-medium">{day.label}</span>}
         {day.override && <Badge tone="purple">個別設定</Badge>}
       </div>
-      <table className="w-full text-[13px]">
-        <thead>
-          <tr className="border-b border-line"><Th className="pl-0" />{CATEGORIES.map((c) => <Th key={c} className={cx('text-right', CAT_TONE[c])}>{c}</Th>)}</tr>
-        </thead>
-        <tbody className="tabular-nums">
-          {DAY_PARTS.map((p) => (
-            <tr key={p} className="border-b border-line last:border-0">
-              <Td className="pl-0 font-medium">{PART_LABEL[p]}</Td>
-              {CATEGORIES.map((c) => {
-                const custom = typeof day.customPrices?.[p]?.[c] === 'number'
-                return (
-                  <Td key={c} className="text-right">
-                    <span className={cx('text-[15px] font-bold', custom && 'text-brand')}>{yen(priceOf(c, p, day, rules))}</span>
-                    {custom && <span className="mt-0.5 block text-[10px] font-medium text-brand">個別料金</span>}
-                  </Td>
-                )
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="overflow-x-auto">
+        <table className="w-full text-[13px]">
+          <thead>
+            <tr className="border-b border-line"><Th className="pl-0" />{CATEGORIES.map((c) => <Th key={c} className={cx('text-right', CAT_TONE[c])}>{c}</Th>)}</tr>
+          </thead>
+          <tbody className="tabular-nums">
+            {DAY_PARTS.map((p) => (
+              <tr key={p} className="border-b border-line last:border-0">
+                <Td className="pl-0 font-medium">{PART_LABEL[p]}</Td>
+                {CATEGORIES.map((c) => {
+                  const custom = typeof day.customPrices?.[p]?.[c] === 'number'
+                  return (
+                    <Td key={c} className="text-right">
+                      <span className={cx('text-[15px] font-bold', custom && 'text-brand')}>{yen(priceOf(c, p, day, rules))}</span>
+                      {custom && <span className="mt-0.5 block text-[10px] font-medium text-brand">個別料金</span>}
+                    </Td>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
@@ -180,7 +182,7 @@ function DayPriceTable({ day, rules }: { day: DayInfo; rules: PriceRule[] }) {
 function HoursForm({ settings }: { settings: StoreSettings }) {
   return (
     <ActionForm action={saveHours} className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid gap-3 sm:grid-cols-3">
         <Field label="昼の部 開始"><Input type="time" name="dayStart" defaultValue={settings.dayStart} required /></Field>
         <Field label="夜の部 開始"><Input type="time" name="nightStart" defaultValue={settings.nightStart} required /></Field>
         <Field label="営業日の区切り"><Input type="time" name="dayCutoff" defaultValue={settings.dayCutoff} required /></Field>
@@ -301,13 +303,13 @@ function CalendarTab({ settings, rules, overrides, today, month, date }: {
                 return (
                   <li key={d}>
                     <Link href={href(month, d)} className={cx('flex items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-page', d === date && 'bg-brand-soft/60')}>
-                      <span className="w-32 shrink-0 text-[13px] font-medium tabular-nums">{fmtJaDate(d).slice(5)}</span>
-                      <span className={cx('inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-bold', type === '平日' ? 'bg-[#efeaf9]' : DAY_TYPE_STYLE[type].cell)}>
+                      <span className="w-24 shrink-0 text-[13px] font-medium tabular-nums sm:w-32">{fmtJaDate(d).slice(5)}</span>
+                      <span className={cx('inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-bold whitespace-nowrap', type === '平日' ? 'bg-[#efeaf9]' : DAY_TYPE_STYLE[type].cell)}>
                         <span className={cx('size-2 rounded-full', DAY_TYPE_STYLE[type].dot)} />{type}
                       </span>
                       <span className="min-w-0 flex-1 truncate text-[13px]">{o ? o.label || '—' : holidayName(d)}</span>
                       {o?.customPrices && <Badge tone="purple">個別料金</Badge>}
-                      {!o && <span className="text-[11px] text-mute">自動</span>}
+                      {!o && <span className="shrink-0 text-[11px] whitespace-nowrap text-mute">自動</span>}
                       <ChevronRight className="size-4 shrink-0 text-mute" />
                     </Link>
                   </li>
@@ -367,7 +369,7 @@ function KindSelect({ value }: { value?: MenuItem['kind'] }) {
 
 function MenuTab({ menu }: { menu: MenuItem[] }) {
   const nextSort = menu.reduce((a, m) => Math.max(a, m.sort), -1) + 1
-  const grid = 'grid items-center gap-2 md:grid-cols-[96px_minmax(0,1fr)_120px_64px_52px_88px]'
+  const grid = 'grid grid-cols-2 items-center gap-2 md:grid-cols-[96px_minmax(0,1fr)_120px_64px_52px_88px]'
   return (
     <div className="space-y-5">
       <Card title="メニューを追加">
@@ -404,11 +406,16 @@ function MenuTab({ menu }: { menu: MenuItem[] }) {
                       <input type="hidden" name="id" value={m.id} />
                       <div className={grid}>
                         <KindSelect value={m.kind} />
-                        <Input name="name" defaultValue={m.name} maxLength={40} required aria-label="メニュー名" className={cx(!m.active && 'text-mute')} />
+                        <div className="order-first col-span-2 md:order-none md:col-span-1">
+                          <Input name="name" defaultValue={m.name} maxLength={40} required aria-label="メニュー名" className={cx(!m.active && 'text-mute')} />
+                        </div>
                         <YenInput name="price" defaultValue={m.price} required aria-label="金額" />
-                        <Input type="number" name="sort" defaultValue={m.sort} min={0} max={9999} aria-label="並び順" className="tabular-nums" />
-                        <Switch name="active" defaultChecked={m.active} ariaLabel={`${m.name}を表示`} />
-                        <div className="flex gap-1.5">
+                        <label className="flex items-center gap-2">
+                          <span className="shrink-0 text-[12px] text-sub md:hidden">並び順</span>
+                          <Input type="number" name="sort" defaultValue={m.sort} min={0} max={9999} aria-label="並び順" className="tabular-nums" />
+                        </label>
+                        <Switch name="active" defaultChecked={m.active} ariaLabel={`${m.name}を表示`} label={<span className="text-[12px] text-sub md:sr-only">表示</span>} />
+                        <div className="col-span-2 flex justify-end gap-1.5 md:col-span-1 md:justify-start">
                           <SubmitButton size="sm" variant="outline" pendingText="…">保存</SubmitButton>
                           <button type="submit" name="intent" value="delete" data-confirm={`「${m.name}」を削除しますか？（過去の売上記録は残ります）`}
                             className={buttonCls('ghost', 'sm')} aria-label={`${m.name}を削除`} title="削除">

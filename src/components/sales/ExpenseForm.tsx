@@ -27,7 +27,7 @@ export function ExpenseForm({ date }: { date: string }) {
           </label>
         ))}
       </div>
-      <div className="grid gap-3 sm:grid-cols-[1fr_160px]">
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_160px]">
         <Field label={k.nameLabel}>
           <Input name="name" maxLength={100} placeholder={k.namePlaceholder} defaultValue={state.values?.name} autoComplete="off" />
         </Field>

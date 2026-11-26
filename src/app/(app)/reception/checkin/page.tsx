@@ -38,16 +38,16 @@ export default async function CheckinPage({ searchParams }: PageProps<'/receptio
   return (
     <div className="animate-fade-in mx-auto max-w-4xl space-y-5">
       <Card bodyClass="p-4 sm:p-5">
-        <form className="flex gap-2" action="/reception/checkin">
+        <form className="flex flex-col gap-2 sm:flex-row" action="/reception/checkin">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute top-1/2 left-4 size-6 -translate-y-1/2 text-mute" />
             <input
               name="q" defaultValue={q} autoFocus={!selected} autoComplete="off" enterKeyHint="search" aria-label="会員検索"
               placeholder="会員番号（例 10234）・ハンドルネーム"
-              className="h-16 w-full rounded-xl border border-line bg-white pr-4 pl-13 text-[20px] font-bold outline-none placeholder:font-normal placeholder:text-mute focus:border-brand focus:ring-2 focus:ring-brand/15"
+              className="h-14 w-full rounded-xl border border-line bg-white pr-4 pl-13 text-[18px] font-bold outline-none sm:h-16 sm:text-[20px] placeholder:font-normal placeholder:text-mute focus:border-brand focus:ring-2 focus:ring-brand/15"
             />
           </div>
-          <button className={cx(buttonCls('brand', 'lg'), 'h-16 px-7 text-[17px]')}><Search className="size-5" />検索</button>
+          <button className={cx(buttonCls('brand', 'lg'), 'h-14 px-7 text-[17px] sm:h-16')}><Search className="size-5" />検索</button>
         </form>
         <p className="mt-2 text-[12px] text-sub">番号は接頭辞なしの一部でも検索できます（10234 → {ctx.store.memberPrefix}10234）。番号と名前を空白で区切って同時に指定することもできます。</p>
       </Card>
