@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { and, asc, between, eq, isNull, or } from 'drizzle-orm'
-import { FileSpreadsheet, Info, UserCog } from 'lucide-react'
+import { FileSpreadsheet, UserCog } from 'lucide-react'
 import { Badge, Card, Empty, Td, Th, buttonCls, cx } from '@/components/ui'
 import { Tabs } from '@/components/settings/fields'
 import { MonthNav } from '@/components/sales/MonthNav'
@@ -11,7 +11,7 @@ import { query, requireCtx, requireOwner } from '@/lib/dal'
 import { STAFF_KINDS, fmtClock, fmtHm, sortStaff, toHours, toJstLocal, workMinutes } from '@/lib/attendance'
 import { WEEK_JA, daysInMonth, fmtJaDate, fmtJaMonth, fmtMD, weekdayOf } from '@/lib/format'
 import { businessDateOf } from '@/lib/pricing'
-import { AddRecordForm, AddStaffMemberForm, PunchCard, RecordRow, StaffMemberRow, type RecordRowData } from './AttendanceForms'
+import { AddRecordForm, AddStaffMemberForm, LiveClock, PunchBoard, RecordRow, StaffMemberRow, type PunchItem, type RecordRowData } from './AttendanceForms'
 
 export const metadata: Metadata = { title: '勤怠' }
 
@@ -58,16 +58,26 @@ async function PunchTab() {
   }, ctx)
   const now = new Date()
   const name = new Map(data.staff.map((m) => [m.id, m]))
-  const cards = data.staff.map((m) => {
+  const items: PunchItem[] = data.staff.map((m) => {
     const open = data.recs.find((r) => r.staffMemberId === m.id && !r.clockOut)
     const done = data.recs.filter((r) => r.staffMemberId === m.id && r.clockOut && r.businessDate === data.today)
+    const last = done.at(-1)
     const status = open
       ? `勤務中　${fmtClock(open.clockIn, open.businessDate)}〜（${fmtHm(workMinutes(open.clockIn, now) ?? 0)}）`
       : done.length
         ? `退勤済　${done.map((r) => `${fmtClock(r.clockIn, r.businessDate)}〜${fmtClock(r.clockOut, r.businessDate)}`).join('、')}`
         : '未出勤'
     const warn = open && open.businessDate < data.today ? `${fmtMD(open.businessDate)}の退勤が記録されていません` : undefined
-    return { m, open: !!open, status, warn }
+    return {
+      id: m.id, name: m.name, kind: m.kind, status, warn,
+      state: open ? '勤務中' : done.length ? '退勤済' : '未出勤',
+      clockIn: open ? fmtClock(open.clockIn, open.businessDate) : last ? fmtClock(last.clockIn, last.businessDate) : '—',
+      clockOut: open ? '—' : last ? fmtClock(last.clockOut, last.businessDate) : '—',
+    }
+  })
+  const groups = STAFF_KINDS.map((kind) => {
+    const n = items.filter((i) => i.kind === kind).length
+    return { kind, note: `${n}名${kind === 'アルバイト' ? '・名前順' : ''}` }
   })
   const todays = data.recs.filter((r) => r.businessDate === data.today && name.has(r.staffMemberId))
   const closedMin = todays.reduce((a, r) => a + (workMinutes(r.clockIn, r.clockOut) ?? 0), 0)
@@ -75,24 +85,9 @@ async function PunchTab() {
   return (
     <>
       <Card title={<>本日の打刻<span className="text-[13px] font-medium text-sub">{fmtJaDate(data.today)}</span></>}
-        action={<span className="hidden items-center gap-1.5 text-[12px] text-sub sm:flex"><Info className="size-3.5" />名前を押すと、出勤・退勤を記録します</span>}>
-        {cards.length ? (
-          <div className="space-y-5">
-            {STAFF_KINDS.map((kind) => {
-              const list = cards.filter((c) => c.m.kind === kind)
-              if (!list.length) return null
-              return (
-                <section key={kind} data-testid={`punch-group-${kind}`}>
-                  <h3 className="mb-2 flex items-center gap-2 text-[14px] font-bold">
-                    {kind}<span className="text-[12px] font-medium text-sub">{list.length}名{kind === 'アルバイト' && '・名前順'}</span>
-                  </h3>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {list.map((c) => <PunchCard key={c.m.id} id={c.m.id} name={c.m.name} working={c.open} status={c.status} warn={c.warn} />)}
-                  </div>
-                </section>
-              )
-            })}
-          </div>
+        action={<span className="flex items-center gap-2 text-[12px] text-sub">現在時刻<LiveClock /></span>}>
+        {items.length ? (
+          <PunchBoard items={items} groups={groups} />
         ) : (
           <Empty>
             勤怠の対象者が登録されていません。

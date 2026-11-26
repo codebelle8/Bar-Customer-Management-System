@@ -1,7 +1,7 @@
 'use client'
 
-// 勤怠の画面部品：打刻ボタン・記録の追加／修正・対象者の追加／変更
-import { useState } from 'react'
+// 勤怠の画面部品：打刻（名前のボタン）・記録の追加／修正・対象者の追加／変更
+import { useEffect, useRef, useState } from 'react'
 import { LogIn, LogOut, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { Button, Field, Input, Select, Td, cx } from '@/components/ui'
 import { ActionForm, FormMessage, SubmitButton, useFormCtx } from '@/components/settings/form'
@@ -12,40 +12,148 @@ import { addRecord, addStaffMember, punch, updateRecord, updateStaffMember } fro
 
 /* ------------------------------ 打刻 ------------------------------ */
 
-export function PunchCard({ id, name, working, status, warn }: { id: string; name: string; working: boolean; status: string; warn?: string }) {
+export type PunchState = '未出勤' | '勤務中' | '退勤済'
+
+export interface PunchItem {
+  id: string
+  name: string
+  kind: StaffKind
+  state: PunchState
+  /** 本日の出勤・退勤の時刻（例「19:00」「翌2:10」。無ければ「—」） */
+  clockIn: string
+  clockOut: string
+  /** 状態の説明（例「勤務中　19:00〜（1:20）」） */
+  status: string
+  warn?: string
+}
+
+const initial = (name: string) => Array.from(name.trim())[0] ?? '?'
+
+/** 打刻：名前のボタンを選ぶ → 出勤・退勤のボタンを押す */
+export function PunchBoard({ items, groups }: { items: PunchItem[]; groups: { kind: StaffKind; note: string }[] }) {
+  const [sel, setSel] = useState<string | null>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const current = items.find((i) => i.id === sel) ?? null
+  const choose = (id: string) => {
+    setSel(id)
+    // 画面が狭いときは、下に出るボタンが見えるようにする
+    requestAnimationFrame(() => panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }))
+  }
   return (
-    <ActionForm action={punch} className="flex flex-col">
-      <input type="hidden" name="staffMemberId" value={id} />
-      <input type="hidden" name="mode" value={working ? 'out' : 'in'} />
-      <PunchButton name={name} working={working} status={status} warn={warn} />
-    </ActionForm>
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="space-y-5">
+        <p className="text-[14px] font-bold text-sub">お名前を選んでください</p>
+        {groups.map(({ kind, note }) => {
+          const list = items.filter((i) => i.kind === kind)
+          if (!list.length) return null
+          return (
+            <section key={kind} data-testid={`punch-group-${kind}`}>
+              <h3 className="mb-2 flex items-center gap-2 text-[14px] font-bold">
+                {kind}<span className="text-[12px] font-medium text-sub">{note}</span>
+              </h3>
+              <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6">
+                {list.map((i) => <NameButton key={i.id} item={i} selected={i.id === sel} onClick={() => choose(i.id)} />)}
+              </div>
+            </section>
+          )
+        })}
+      </div>
+      <div ref={panelRef} className="scroll-mt-24 self-start xl:sticky xl:top-24">
+        {current ? <PunchPanel key={current.id} item={current} /> : (
+          <div className="grid min-h-40 place-items-center rounded-2xl border-2 border-dashed border-line px-5 py-8 text-center text-[14px] text-sub">
+            お名前を選ぶと、ここに出勤・退勤のボタンが表示されます
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 
-function PunchButton({ name, working, status, warn }: { name: string; working: boolean; status: string; warn?: string }) {
+function NameButton({ item, selected, onClick }: { item: PunchItem; selected: boolean; onClick: () => void }) {
+  const working = item.state === '勤務中'
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      data-testid={`punch-${item.name}`}
+      className={cx(
+        'flex min-w-0 flex-col items-center gap-1.5 rounded-xl border-2 px-1.5 py-3 transition',
+        selected ? 'border-brand bg-brand-soft' : working ? 'border-ok/60 bg-[#effaf3] hover:border-ok' : 'border-line bg-white hover:border-brand-light',
+      )}
+    >
+      <span className={cx('grid size-12 place-items-center rounded-full text-[19px] font-bold',
+        working ? 'bg-ok text-white' : item.state === '退勤済' ? 'bg-[#efeaf7] text-sub' : 'btn-brand')}>
+        {initial(item.name)}
+      </span>
+      <span className="w-full truncate text-center text-[15px] font-bold text-ink">{item.name}</span>
+      <span className={cx('rounded-md px-2 py-0.5 text-[11px] font-bold',
+        working ? 'bg-white text-ok' : item.state === '退勤済' ? 'bg-page text-sub' : 'text-mute')}>
+        {item.state}
+      </span>
+      {item.warn && <span className="text-[10px] leading-tight font-bold text-up">退勤の記録なし</span>}
+    </button>
+  )
+}
+
+function PunchPanel({ item }: { item: PunchItem }) {
+  const working = item.state === '勤務中'
+  return (
+    <div className="animate-fade-in rounded-2xl border-2 border-brand/40 bg-white p-5" data-testid="punch-panel">
+      <div className="flex items-center gap-3">
+        <span className={cx('grid size-14 shrink-0 place-items-center rounded-full text-[22px] font-bold', working ? 'bg-ok text-white' : 'btn-brand')}>
+          {initial(item.name)}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[20px] font-bold text-ink">{item.name} さん</p>
+          <p className="text-[12px] text-sub">{item.kind}</p>
+        </div>
+        <dl className="shrink-0 text-right text-[12px] text-sub">
+          <div>出勤 <b className="text-[14px] text-ink tabular-nums">{item.clockIn}</b></div>
+          <div>退勤 <b className="text-[14px] text-ink tabular-nums">{item.clockOut}</b></div>
+        </dl>
+      </div>
+      <p className={cx('mt-4 text-center text-[13px] font-bold', working ? 'text-ok' : 'text-sub')} data-testid="punch-status">{item.status}</p>
+      {item.warn && <p className="mt-1 text-center text-[12px] font-bold text-up">{item.warn}</p>}
+      <ActionForm action={punch} className="mt-3">
+        <input type="hidden" name="staffMemberId" value={item.id} />
+        <input type="hidden" name="mode" value={working ? 'out' : 'in'} />
+        <PunchSubmit name={item.name} working={working} />
+      </ActionForm>
+    </div>
+  )
+}
+
+function PunchSubmit({ name, working }: { name: string; working: boolean }) {
   const { pending } = useFormCtx()
   return (
     <button
       type="submit"
       disabled={pending}
-      data-testid={`punch-${name}`}
+      data-testid="punch-submit"
       data-confirm={`${name}さんの${working ? '退勤' : '出勤'}を記録します。よろしいですか？`}
       className={cx(
-        'flex w-full flex-col gap-1 rounded-xl border-2 px-4 py-3 text-left transition disabled:cursor-wait disabled:opacity-60',
-        working ? 'border-ok bg-[#effaf3] hover:bg-[#e2f5e9]' : 'border-line bg-white hover:border-brand-light',
+        'flex h-16 w-full items-center justify-center gap-2 rounded-xl text-[19px] font-bold transition disabled:cursor-wait disabled:opacity-60',
+        working ? 'border-2 border-up bg-white text-up hover:bg-[#fff4f6]' : 'btn-brand',
       )}
     >
-      <span className="flex items-center justify-between gap-2">
-        <span className="truncate text-[18px] font-bold text-ink">{name}</span>
-        <span className={cx('inline-flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1 text-[13px] font-bold', working ? 'bg-white text-up ring-1 ring-[#f2c2cb]' : 'btn-brand')}>
-          {working ? <LogOut className="size-4" /> : <LogIn className="size-4" />}
-          {pending ? '記録中…' : working ? '退勤' : '出勤'}
-        </span>
-      </span>
-      <span className={cx('text-[12px] font-medium', working ? 'text-ok' : 'text-sub')}>{status}</span>
-      {warn && <span className="text-[11px] font-medium text-up">{warn}</span>}
+      {working ? <LogOut className="size-5" /> : <LogIn className="size-5" />}
+      {pending ? '記録中…' : working ? '退勤する' : '出勤する'}
     </button>
   )
+}
+
+/** 現在時刻（日本時間・画面の時計。記録はサーバーの時刻） */
+export function LiveClock() {
+  const [now, setNow] = useState('')
+  useEffect(() => {
+    const f = new Intl.DateTimeFormat('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false })
+    const tick = () => setNow(f.format(new Date()))
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [])
+  return <span className="text-[34px] leading-none font-bold tracking-wider text-ink tabular-nums" data-testid="live-clock">{now || '--:--'}</span>
 }
 
 /* ------------------------------ 記録の修正（月別集計の明細） ------------------------------ */
