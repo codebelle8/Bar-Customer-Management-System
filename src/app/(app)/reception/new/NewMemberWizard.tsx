@@ -2,7 +2,7 @@
 // 新規入会の受付（4ステップ）：規約署名 → 本人確認 → 会員情報 → 料金・お会計
 import Link from 'next/link'
 import { useActionState, useEffect, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, Check, IdCard, Loader2, Printer, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, IdCard, Loader2, ShieldCheck } from 'lucide-react'
 import { Button, Card, Textarea, buttonCls, cx } from '@/components/ui'
 import type { Category } from '@/db/schema'
 import { ageOn, fmtJaDate } from '@/lib/format'
@@ -136,10 +136,7 @@ export function NewMemberWizard(p: WizardProps) {
             <TermsBody lines={p.terms} />
             <p className="mt-4 rounded-lg border border-brand/30 bg-white px-4 py-3 text-center font-bold">{p.pledge}</p>
           </div>
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <Link href="/print/terms" target="_blank" className={buttonCls('outline', 'lg')}><Printer className="size-4" />規約用紙を印刷</Link>
-            <span className="text-[12px] text-sub">太字・下線の項目は特にご説明ください。</span>
-          </div>
+          <p className="mt-3 text-[12px] text-sub">太字・下線の項目は特にご説明ください。</p>
           <div className="mt-4">
             <CheckTile checked={signed} onChange={setSigned} required testId="terms-signed" sub="お客様に規約を説明し、紙の規約用紙に署名をいただいたことを確認します">
               会員規約用紙に署名をいただきました
