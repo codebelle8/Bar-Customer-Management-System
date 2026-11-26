@@ -30,7 +30,13 @@ export const NAV = [
  * 店舗の切り替え：切り替え中は操作できないようにして表示し、終わったら画面全体を読み込み直す
  * （前の店舗の数字やグラフが画面に残らないようにするため）。個別の会員・来店の画面は一覧に戻る
  */
-function StoreSwitcher({ stores, storeId }: { stores: { id: string; name: string; status: string }[]; storeId: string }) {
+function StoreSwitcher({ stores, storeId, className, testId = 'store-switch' }: {
+  stores: { id: string; name: string; status: string }[]
+  storeId: string
+  /** 選択欄の幅など（スマートフォンでは横いっぱい） */
+  className?: string
+  testId?: string
+}) {
   const pathname = usePathname()
   const [pending, start] = useTransition()
   const [failed, setFailed] = useState(false)
@@ -48,9 +54,9 @@ function StoreSwitcher({ stores, storeId }: { stores: { id: string; name: string
     })
   }
   return (
-    <div className="relative flex items-center gap-2">
-      <select name="storeId" defaultValue={storeId} disabled={pending} onChange={(e) => change(e.currentTarget.value)} data-testid="store-switch"
-        className="h-10 min-w-44 rounded-lg border border-line bg-white px-3 text-[14px] font-medium outline-none focus:border-brand disabled:opacity-60" aria-label="店舗">
+    <div className={cx('relative flex items-center gap-2', className && 'min-w-0 flex-1')}>
+      <select name="storeId" defaultValue={storeId} disabled={pending} onChange={(e) => change(e.currentTarget.value)} data-testid={testId}
+        className={cx('h-10 rounded-lg border border-line bg-white px-3 text-[14px] font-medium outline-none focus:border-brand disabled:opacity-60', className ?? 'min-w-44')} aria-label="店舗">
         {stores.map((s) => (
           <option key={s.id} value={s.id}>{s.name}{s.status === 'preparing' && !s.name.includes('準備中') ? '（準備中）' : ''}</option>
         ))}
@@ -211,6 +217,15 @@ export function Topbar(props: {
           </div>
         </div>
       </header>
+      {/* スマートフォン（画面幅 768px 未満）：右上に入りきらないため、ヘッダーの下に店舗の表示・切り替えを出す */}
+      <div className="no-print flex items-center gap-2 border-b border-line bg-white/95 px-4 py-2 md:hidden" data-testid="store-bar-mobile">
+        <span className="shrink-0 text-[13px] font-medium text-sub">店舗：</span>
+        {canSwitchStore ? (
+          <StoreSwitcher key={storeId} stores={stores} storeId={storeId} className="w-full min-w-0" testId="store-switch-mobile" />
+        ) : (
+          <span className="truncate text-[14px] font-bold">{storeName}</span>
+        )}
+      </div>
       {menu && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setMenu(false)} />
